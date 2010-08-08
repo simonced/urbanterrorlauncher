@@ -28,6 +28,7 @@ class Utsq:
 		try:
 			self.sock.connect( (host, port) )
 			self.connected = True
+			self.sock.settimeout(1.0)  # timeout of 1 second
 			self.getall()
 			
 		except socket.error:

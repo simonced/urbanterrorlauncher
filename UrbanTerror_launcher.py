@@ -6,14 +6,17 @@ Simonced Urban Terror Launcher
 simonced@gmail.com
 Thgis is a tool to save your prefered servers you play often on.
 """
+import shlex
 
 import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
 import os
+import subprocess, shlex
 import UrbanTerror_server_query as UTSQ
 from TreeViewTooltips import TreeViewTooltips	#great tooltips lib
+
 
 Version = "0.6"
 PaddingDefault = 5
@@ -437,7 +440,9 @@ class Utl:
 		if iter!=None:
 			launch_cmd = self.urtExec + " +connect " + model.get(iter, 1)[0]
 			print("launching game with command : " + launch_cmd)
-			os.system(launch_cmd)
+			#os.system(launch_cmd)
+			args = shlex.split(launch_cmd)
+			subprocess.Popen(args)
 			return True
 		else:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
