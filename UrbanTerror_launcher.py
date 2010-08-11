@@ -7,7 +7,7 @@ simonced@gmail.com
 Thgis is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-
+__version__="0.6.4"
 
 import shlex
 
@@ -22,7 +22,7 @@ import UrbanTerror_colors_tools as UTCT
 from TreeViewTooltips import TreeViewTooltips	#great tooltips lib
 
 
-Version = "0.6.3"
+Version = __version__
 PaddingDefault = 5
 GameTypes = ('FFA', 'TDM', 'TS', 'CTF', 'BOMB', 'ICY')
 GameColors = {'FFA':'#FFFCCC', 'TDM':'#FFEBCC', 'TS':'#FFE7CC', 'CTF':'#FFCCFD', 'BOMB':'#FFCCCC', 'ICY':'#CCFEFF'}
@@ -184,6 +184,7 @@ class Utl:
 		#then, few buttons that can act on the table rows
 		row_treeBts = gtk.HBox()
 		self.del_bt = gtk.Button("Delete")
+		self.del_bt.set_sensitive(False)	#disabled button
 		self.del_bt.connect("clicked", self.delete)
 		row_treeBts.pack_end(self.del_bt, False, False, PaddingDefault)
 		
@@ -309,7 +310,7 @@ class Utl:
 		gtk.main_quit()
 
 	#===
-	#Simple function to query a server'name from its IP
+	#Simple function to query a server'name from its IP and set it up in the server_name entry
 	def getServerName(self, event_, data_=None):
 		address_ = self.server_address.get_text()
 		(address, port) = address_.split(":", 1)
@@ -363,11 +364,13 @@ class Utl:
 			self.server_name.set_text("")
 			self.server_address.set_text("")
 			self.game_type.set_active(-1)
-						
+			self.del_bt.set_sensitive(False)
+
+		#if server files not found, we skip the loading process
 		if not os.path.isfile(ServersFile):
 			return False
 
-		#we clean the list
+		#we clean the list (already in memory, unlike widgets)
 		self.servers_list.clear()
 		
 			
@@ -439,7 +442,10 @@ class Utl:
 				break
 			loop += 1
 		self.game_type.set_active( index )
-		
+
+		#then, we can also activate the del button
+		self.del_bt.set_sensitive(True)
+
 		return False
 		
 
@@ -482,14 +488,13 @@ class Utl:
 		(model, iter) = self.tree.get_selection().get_selected()
 		if iter!=None:
 			launch_cmd = self.urtExec + " +connect " + model.get(iter, 1)[0]
-			print("launching game with command : " + launch_cmd)
-			#os.system(launch_cmd)
-			args = shlex.split(launch_cmd)
-			subprocess.Popen(args)
-			return True
 		else:
-			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
-			return False
+			launch_cmd = self.urtExec
+
+		print("launching game with command : " + launch_cmd)
+		args = shlex.split(launch_cmd)
+		subprocess.Popen(args)
+		return True
 
 
 	#===
