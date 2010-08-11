@@ -6,6 +6,9 @@ Simonced Urban Terror Launcher
 simonced@gmail.com
 Thgis is a tool to save your prefered servers you play often on.
 """
+__author__="Simonced@gmail.com"
+
+
 import shlex
 
 import pygtk
@@ -15,13 +18,14 @@ import gobject
 import os
 import subprocess, shlex
 import UrbanTerror_server_query as UTSQ
+import UrbanTerror_colors_tools as UTCT
 from TreeViewTooltips import TreeViewTooltips	#great tooltips lib
 
 
-Version = "0.6.2"
+Version = "0.6.3"
 PaddingDefault = 5
 GameTypes = ('FFA', 'TDM', 'TS', 'CTF', 'BOMB', 'ICY')
-GameColors = {'FFA':'#fffde0', 'TDM':'#ffd28f', 'TS':'#9effa1', 'CTF':'#ffb0fc', 'BOMB':'#ff8f8f', 'ICY':'#AAAAFF'}
+GameColors = {'FFA':'#FFFCCC', 'TDM':'#FFEBCC', 'TS':'#FFE7CC', 'CTF':'#FFCCFD', 'BOMB':'#FFCCCC', 'ICY':'#CCFEFF'}
 
 ServersFile = "UrbanTerror_launcher.txt"
 DEFAULT_PORT = 27960
@@ -117,7 +121,7 @@ class Utl:
 		cell = gtk.CellRendererText()
 
 		#column view
-		column_name = gtk.TreeViewColumn('Name', cell, text=0, background=5)
+		column_name = gtk.TreeViewColumn('Name', cell, markup=0, background=5)
 		column_address = gtk.TreeViewColumn('Address', cell, text=1, background=5)
 		column_type = gtk.TreeViewColumn('Type', cell, text=2, background=5)
 		column_players = gtk.TreeViewColumn('Players', cell, text=3, background=5)
@@ -308,12 +312,13 @@ class Utl:
 	#Simple function to query a server'name from its IP
 	def getServerName(self, event_, data_=None):
 		address_ = self.server_address.get_text()
-		(address, port) = address_.split(":")[0:2]
+		(address, port) = address_.split(":", 1)
 		if not port:
 			port = DEFAULT_PORT
 		server = UTSQ.Utsq(address, int(port) )
+		server.debug()
 		self.server_name.set_text(server.status['sv_hostname'])
-		
+
 
 	#===
 	#function to insert the new server in our list
@@ -376,20 +381,24 @@ class Utl:
 				(address1, port2) = address.split(":")
 			except:
 				address1 = address
-				port2=DEFAULT_PORT
-			
+				port2 = DEFAULT_PORT
+
+			#server query for players
 			utsq_cli = UTSQ.Utsq(address1, int(port2))
 			if utsq_cli.request:
 				players = str(len(utsq_cli.clients)) + " / " + str(utsq_cli.status['sv_maxclients'])
 				mapname = utsq_cli.status['mapname']
+				servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
 				#we save at the same time the list of players online for this address ;)
 				self.players[address] = utsq_cli.clients
 			else:
 				players = "ERR"
 				mapname = ""
+				servername = name #from conf
 			
 			#update of the model
-			self.servers_list.append( (name, address, type, players, mapname, color ) )
+			
+			self.servers_list.append( (servername, address, type, players, mapname, color ) )
 
 			utsq_cli.close()
 
@@ -416,8 +425,8 @@ class Utl:
 		model_players.clear()
 		if address in self.players:
 			for player in self.players[ address ]:
-				(score_full, name ) = player.split('"')[0:2]
-				(score, ping) = score_full.split(' ')[0:2]
+				(score_full, name ) = player.split('"', 1)
+				(score, ping) = score_full.split(' ', 1)
 				model_players.append( (name, int(score.strip()), int(ping.strip()), '#FFFFFF') )
 
 		
