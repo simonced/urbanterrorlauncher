@@ -18,9 +18,11 @@ import UrbanTerror_server_query as UTSQ
 from TreeViewTooltips import TreeViewTooltips	#great tooltips lib
 
 
-Version = "0.6"
+Version = "0.6.2"
 PaddingDefault = 5
 GameTypes = ('FFA', 'TDM', 'TS', 'CTF', 'BOMB', 'ICY')
+GameColors = {'FFA':'#fffde0', 'TDM':'#ffd28f', 'TS':'#9effa1', 'CTF':'#ffb0fc', 'BOMB':'#ff8f8f', 'ICY':'#AAAAFF'}
+
 ServersFile = "UrbanTerror_launcher.txt"
 DEFAULT_PORT = 27960
 
@@ -84,7 +86,7 @@ class Utl:
 		self.win.set_border_width(5)
 		self.win.connect("destroy", self.quitter)
 		self.win.set_title("Urban Terror Launcher v"+Version)
-		self.win.set_size_request(750, 450)
+		self.win.set_size_request(750, 600)
 		layer = gtk.VBox()
 		
 		# == Section1 == Listing and launching
@@ -92,18 +94,34 @@ class Utl:
 		layer.pack_start(section1_title, False, False, PaddingDefault)
 
 		#model for the view (ListStore)
-		self.servers_list = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_STRING, gobject.TYPE_STRING, gobject.TYPE_STRING, gobject.TYPE_STRING)
+		self.servers_list = gtk.ListStore(\
+			gobject.TYPE_STRING, \
+			gobject.TYPE_STRING, \
+			gobject.TYPE_STRING, \
+			gobject.TYPE_STRING, \
+			gobject.TYPE_STRING, \
+			gobject.TYPE_STRING)
+		#model :
+		# name
+		# address
+		# players
+		# map
+		# color (GUI info)
+
 		#inserting the data from the file
 		self.loadFile(False)
 		#display object (TreeView)
 		self.tree = gtk.TreeView(self.servers_list)
 
+		#cell to render content
+		cell = gtk.CellRendererText()
+
 		#column view
-		column_name = gtk.TreeViewColumn('Name')
-		column_address = gtk.TreeViewColumn('Address')
-		column_type = gtk.TreeViewColumn('Type')
-		column_players = gtk.TreeViewColumn('Players')
-		column_map = gtk.TreeViewColumn('Map')
+		column_name = gtk.TreeViewColumn('Name', cell, text=0, background=5)
+		column_address = gtk.TreeViewColumn('Address', cell, text=1, background=5)
+		column_type = gtk.TreeViewColumn('Type', cell, text=2, background=5)
+		column_players = gtk.TreeViewColumn('Players', cell, text=3, background=5)
+		column_map = gtk.TreeViewColumn('Map', cell, text=4, background=5)
 		
 		#adding the columns to the treeview
 		self.tree.append_column(column_name)
@@ -111,8 +129,7 @@ class Utl:
 		self.tree.append_column(column_type)
 		self.tree.append_column(column_players)
 		self.tree.append_column(column_map)
-		#cell to render content
-		cell = gtk.CellRendererText()
+
 		#attach to the columns
 		column_name.pack_start(cell, True)
 		column_address.pack_start(cell, True)
@@ -193,6 +210,7 @@ class Utl:
 		label_address.set_alignment(0.9, 0.5)
 		row2.pack_start(label_address, False, False, PaddingDefault)
 		self.server_address = gtk.Entry()
+		self.server_address.connect("focus-out-event", self.getServerName)
 		row2.pack_start(self.server_address, True, True, PaddingDefault)
 		bloc_down_left.pack_start(row2, False, False, PaddingDefault)
 
@@ -224,12 +242,22 @@ class Utl:
 		bloc_down.pack_start(bloc_down_left, False, True, PaddingDefault)
 		
 		# == Section 2 - right part ==
-		players_model = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_INT, gobject.TYPE_INT)
+		players_model = gtk.ListStore(\
+			gobject.TYPE_STRING, \
+			gobject.TYPE_INT, \
+			gobject.TYPE_INT, \
+			gobject.TYPE_STRING)
+		#model :
+		# player name
+		# player score
+		# player ping
+		# cell color. always white
+		
 		self.players_tree = gtk.TreeView(players_model)
 		#the columns for the view
-		column_player_name = gtk.TreeViewColumn('Name')
-		column_player_score = gtk.TreeViewColumn('Score')
-		column_player_ping = gtk.TreeViewColumn('Ping')
+		column_player_name = gtk.TreeViewColumn('Name', cell, text=0, background=3)
+		column_player_score = gtk.TreeViewColumn('Score', cell, text=1, background=3)
+		column_player_ping = gtk.TreeViewColumn('Ping', cell, text=2, background=3)
 		#adding the columns to the treeview
 		self.players_tree.append_column(column_player_name)
 		self.players_tree.append_column(column_player_score)
@@ -276,6 +304,16 @@ class Utl:
 		self.win.destroy()
 		gtk.main_quit()
 
+	#===
+	#Simple function to query a server'name from its IP
+	def getServerName(self, event_, data_=None):
+		address_ = self.server_address.get_text()
+		(address, port) = address_.split(":")[0:2]
+		if not port:
+			port = DEFAULT_PORT
+		server = UTSQ.Utsq(address, int(port) )
+		self.server_name.set_text(server.status['sv_hostname'])
+		
 
 	#===
 	#function to insert the new server in our list
@@ -299,9 +337,6 @@ class Utl:
 		except:
 			print("ERROR WHILE SAUVING THE FILE")
 
-
-	#===
-	
 
 	#===
 	#the click on the refresh button
@@ -334,8 +369,8 @@ class Utl:
 		#then we open the file and fill in the list			
 		f = open(ServersFile, "r")
 		for line in f:
-			(name, address, type) = line.split("|")
-			
+			(name, address, type) = line.strip().split("|")
+			color = GameColors[type]
 			#connextion to request the number of players
 			try:
 				(address1, port2) = address.split(":")
@@ -345,7 +380,6 @@ class Utl:
 			
 			utsq_cli = UTSQ.Utsq(address1, int(port2))
 			if utsq_cli.request:
-				#print utsq.debug()
 				players = str(len(utsq_cli.clients)) + " / " + str(utsq_cli.status['sv_maxclients'])
 				mapname = utsq_cli.status['mapname']
 				#we save at the same time the list of players online for this address ;)
@@ -355,9 +389,9 @@ class Utl:
 				mapname = ""
 			
 			#update of the model
-			self.servers_list.append( (name, address, type.strip(), players, mapname ) )
-			
-			utsq_cli.close()			
+			self.servers_list.append( (name, address, type, players, mapname, color ) )
+
+			utsq_cli.close()
 
 		f.close()
 	
@@ -384,7 +418,7 @@ class Utl:
 			for player in self.players[ address ]:
 				(score_full, name ) = player.split('"')[0:2]
 				(score, ping) = score_full.split(' ')[0:2]
-				model_players.append( (name, int(score.strip()), int(ping.strip())) )
+				model_players.append( (name, int(score.strip()), int(ping.strip()), '#FFFFFF') )
 
 		
 		#loop for game types
