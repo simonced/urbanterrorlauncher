@@ -7,7 +7,7 @@ simonced@gmail.com
 Thgis is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.6.4"
+__version__="0.6.5"
 
 import shlex
 
@@ -323,7 +323,7 @@ class Utl:
 
 	#===
 	#function to insert the new server in our list
-	def add(self, data=None):
+	def add(self, data_=None):
 		
 		#les donnees saisies - le type de jeu
 		type_choisi=""
@@ -332,16 +332,17 @@ class Utl:
 			type_choisi = GameTypes[index]
 		#text line to be instered
 		line = self.buildTxtLine(self.server_name.get_text(), self.server_address.get_text(), type_choisi)
-		
+
 		try:
 			file = open(ServersFile, "a")	#append mode
 			file.write(line)
 			file.close()
 
-			self.loadFile()
-
 		except:
-			print("ERROR WHILE SAUVING THE FILE")
+			print("ERROR WHILE SAVING THE FILE")
+
+		#we delete the previous line if needed
+		self.delete(None)
 
 
 	#===
@@ -350,7 +351,9 @@ class Utl:
 		self.statusBar.push(1, "Refreshing the servers list, please wait...")
 		self.win.queue_draw()
 		#How to refresh this damn status bar?
-		self.loadFile()
+
+		#anyway, we return the load status
+		return self.loadFile()
 		
 	
 	#===
@@ -372,7 +375,6 @@ class Utl:
 
 		#we clean the list (already in memory, unlike widgets)
 		self.servers_list.clear()
-		
 			
 		#then we open the file and fill in the list			
 		f = open(ServersFile, "r")
@@ -400,7 +402,6 @@ class Utl:
 				servername = name #from conf
 			
 			#update of the model
-			
 			self.servers_list.append( (servername, address, type, players, mapname, color ) )
 
 			utsq_cli.close()
@@ -409,6 +410,8 @@ class Utl:
 	
 		if init_:
 			self.statusBar.push(1, "Servers list updated")
+
+		return True
 	
 
 	#===
@@ -431,7 +434,6 @@ class Utl:
 				(score_full, name ) = player.split('"', 1)
 				(score, ping) = score_full.split(' ', 1)
 				model_players.append( (name, int(score.strip()), int(ping.strip()), '#FFFFFF') )
-
 		
 		#loop for game types
 		loop = 0
@@ -475,7 +477,7 @@ class Utl:
 			f.write(new_file)
 			f.close()
 
-			return self.loadFile(ServersFile)
+			return self.refresh()
 
 		except:
 			print( "ERROR AT DELETION IN THE FILE" )
@@ -523,6 +525,7 @@ class Utl:
 		f.close()
 		
 		return True
+
 
 #main loop
 #=========

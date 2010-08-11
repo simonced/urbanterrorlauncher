@@ -9,4 +9,4 @@ Clan tR 2nd|112.70.120.44:27961|TS
 WTF - Call of Nooby|64.156.192.169:27964|TS
 WTF - Noobys Heaven|64.156.193.115:27963|CTF
 **1up Icy Jumps Server**|208.43.15.8:27960|ICY
-localhost|127.0.0.1|ICY
+localhost|127.0.0.1|FFA
