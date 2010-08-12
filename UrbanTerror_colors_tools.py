@@ -1,5 +1,4 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
+# Simple lib to convert console colors from URT into HTML codes
 
 __author__="Simonced@gmail.com"
 __date__ ="$Aug 11, 2010 12:13:58 PM$"

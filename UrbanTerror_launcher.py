@@ -7,7 +7,7 @@ simonced@gmail.com
 Thgis is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.6.5"
+__version__="0.6.6"
 
 import shlex
 
@@ -104,6 +104,7 @@ class Utl:
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
+			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING)
 		#model :
 		# name
@@ -111,6 +112,7 @@ class Utl:
 		# players
 		# map
 		# color (GUI info)
+		# Alias (input from user, not really needed)
 
 		#inserting the data from the file
 		self.loadFile(False)
@@ -124,7 +126,7 @@ class Utl:
 		column_name = gtk.TreeViewColumn('Name', cell, markup=0, background=5)
 		column_address = gtk.TreeViewColumn('Address', cell, text=1, background=5)
 		column_type = gtk.TreeViewColumn('Type', cell, text=2, background=5)
-		column_players = gtk.TreeViewColumn('Players', cell, text=3, background=5)
+		column_players = gtk.TreeViewColumn('Players', cell, markup=3, background=5)
 		column_map = gtk.TreeViewColumn('Map', cell, text=4, background=5)
 		
 		#adding the columns to the treeview
@@ -215,12 +217,11 @@ class Utl:
 		label_address.set_alignment(0.9, 0.5)
 		row2.pack_start(label_address, False, False, PaddingDefault)
 		self.server_address = gtk.Entry()
-		self.server_address.connect("focus-out-event", self.getServerName)
 		row2.pack_start(self.server_address, True, True, PaddingDefault)
 		bloc_down_left.pack_start(row2, False, False, PaddingDefault)
 
 		row1 = gtk.HBox()
-		label_name = gtk.Label("Server Name")		
+		label_name = gtk.Label("Server Alias")
 		label_name.set_alignment(0.9, 0.5)	#lign right
 		row1.pack_start(label_name, False, False, PaddingDefault)
 		self.server_name = gtk.Entry()
@@ -309,17 +310,6 @@ class Utl:
 		self.win.destroy()
 		gtk.main_quit()
 
-	#===
-	#Simple function to query a server'name from its IP and set it up in the server_name entry
-	def getServerName(self, event_, data_=None):
-		address_ = self.server_address.get_text()
-		(address, port) = address_.split(":", 1)
-		if not port:
-			port = DEFAULT_PORT
-		server = UTSQ.Utsq(address, int(port) )
-		server.debug()
-		self.server_name.set_text(server.status['sv_hostname'])
-
 
 	#===
 	#function to insert the new server in our list
@@ -364,8 +354,8 @@ class Utl:
 		#are we asked to clean the input fields?
 		if init_:
 			#once loaded, we clean the input fields
-			self.server_name.set_text("")
 			self.server_address.set_text("")
+			self.server_name.set_text("")
 			self.game_type.set_active(-1)
 			self.del_bt.set_sensitive(False)
 
@@ -379,7 +369,7 @@ class Utl:
 		#then we open the file and fill in the list			
 		f = open(ServersFile, "r")
 		for line in f:
-			(name, address, type) = line.strip().split("|")
+			(conf_name, address, type) = line.strip().split("|")
 			color = GameColors[type]
 			#connextion to request the number of players
 			try:
@@ -392,17 +382,20 @@ class Utl:
 			utsq_cli = UTSQ.Utsq(address1, int(port2))
 			if utsq_cli.request:
 				players = str(len(utsq_cli.clients)) + " / " + str(utsq_cli.status['sv_maxclients'])
+				if len(utsq_cli.clients)>0 and len(utsq_cli.clients)<utsq_cli.status['sv_maxclients']:
+					players = "<b>" + players + "</b>"
 				mapname = utsq_cli.status['mapname']
 				servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
 				#we save at the same time the list of players online for this address ;)
 				self.players[address] = utsq_cli.clients
 			else:
+				#case we can't querry the server
 				players = "ERR"
-				mapname = ""
-				servername = name #from conf
+				mapname = "ERR"
+				servername = "<i>" + conf_name + "</i>"
 			
 			#update of the model
-			self.servers_list.append( (servername, address, type, players, mapname, color ) )
+			self.servers_list.append( (servername, address, type, players, mapname, color, conf_name ) )
 
 			utsq_cli.close()
 
@@ -422,10 +415,10 @@ class Utl:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
 			return False
 			
-		self.server_name.set_text( model.get(iter, 0)[0] )
 		address = model.get(iter, 1)[0]
 		self.server_address.set_text( address )
-		
+		self.server_name.set_text( model.get(iter, 6)[0] )
+
 		#full players list
 		model_players = self.players_tree.get_model()
 		model_players.clear()
