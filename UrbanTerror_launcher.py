@@ -7,15 +7,13 @@ simonced@gmail.com
 Thgis is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.6.6"
-
-import shlex
+__version__="0.7"
 
 import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
-import os
+import os, re
 import subprocess, shlex
 import UrbanTerror_server_query as UTSQ
 import UrbanTerror_colors_tools as UTCT
@@ -105,14 +103,18 @@ class Utl:
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
-			gobject.TYPE_STRING)
-		#model :
-		# name
-		# address
-		# players
-		# map
-		# color (GUI info)
-		# Alias (input from user, not really needed)
+			gobject.TYPE_STRING, \
+			gobject.TYPE_INT)
+
+		# model :
+		# 0 name
+		# 1 address
+		# 2 type
+		# 3 players
+		# 4 map
+		# 5 color (GUI info)
+		# 6 Alias (input from user, not really needed)
+		# 7 file line number for edit or deletion
 
 		#inserting the data from the file
 		self.loadFile(False)
@@ -331,7 +333,7 @@ class Utl:
 		except:
 			print("ERROR WHILE SAVING THE FILE")
 
-		#we delete the previous line if needed
+		#we delete the previous line if needed, this delete call also refreshes the Tree model
 		self.delete(None)
 
 
@@ -368,9 +370,14 @@ class Utl:
 			
 		#then we open the file and fill in the list			
 		f = open(ServersFile, "r")
+		loop = 0
 		for line in f:
 			(conf_name, address, type) = line.strip().split("|")
-			color = GameColors[type]
+			if type in GameColors:
+				color = GameColors[type]
+			else:
+				color = "#FFFFFF"	#simple white color
+				
 			#connextion to request the number of players
 			try:
 				(address1, port2) = address.split(":")
@@ -395,9 +402,12 @@ class Utl:
 				servername = "<i>" + conf_name + "</i>"
 			
 			#update of the model
-			self.servers_list.append( (servername, address, type, players, mapname, color, conf_name ) )
+			self.servers_list.append( (servername, address, type, players, mapname, color, conf_name, loop ) )
 
 			utsq_cli.close()
+
+			#to keep track of the line number
+			loop = loop + 1
 
 		f.close()
 	
@@ -452,17 +462,15 @@ class Utl:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
 			return False
 			
-		server_name = model.get(iter, 0)[0]
-		server_address = model.get(iter, 1)[0]
-		game_type = model.get(iter, 2)[0]
-
-		full_line = self.buildTxtLine(server_name, server_address, game_type)
+		servers_file_line = model.get(iter, 7)[0]
 		try:
 			new_file = ""
 			f = open(ServersFile, "r")
+			loop = 0
 			for line in f:
-				if line != full_line:
+				if loop != servers_file_line:
 					new_file += line
+				loop = loop + 1
 			f.close()
 
 			#opening in write only, to replace all the content
@@ -485,16 +493,61 @@ class Utl:
 			launch_cmd = self.urtExec + " +connect " + model.get(iter, 1)[0]
 		else:
 			launch_cmd = self.urtExec
-
 		print("launching game with command : " + launch_cmd)
+
 		args = shlex.split(launch_cmd)
-		subprocess.Popen(args)
+		logs = open("logs.txt", "w")
+		p = subprocess.call(args, stderr=logs)
+		logs.close()
+
+		logs = open("logs.txt")
+		server_connected = []
+		#todo : analyse the logs
+		for line in logs:
+			res = re.search("resolved to (\d+\.\d+\.\d+\.\d+)",line)
+			if res:
+				server_connected.append(res.groups(1)[0])
+		logs.close()
+		#no need of logs anymore
+		os.remove("logs.txt")
+
+		#analysis of the played server(s)
+		for server in set(server_connected):
+			if ':' in server:
+				(serv_addr, serv_port) = server.strip().split(':', 1)
+			else:
+				serv_addr = server
+				serv_port = DEFAULT_PORT
+				server += ":"+str(DEFAULT_PORT)	#simple change for insertion few lines under
+				#only in case the port is not specified, unlikely should not happen
+
+			#TODO checking that this server address doesn't already exists
+			#have to be sure all servers in the file have the port specified
+			#should be checked at manual add process, TODO
+			conn = UTSQ.Utsq(serv_addr, int(serv_port) )
+			if conn.request:
+				host_name = conn.status['sv_hostname']
+			else :
+				host_name = "HOST WAS UNREACHABLE AT QUERY TIME"
+			conn.close()
+			
+			#new line format
+			new_line = self.buildTxtLine(host_name, server, "AUTO")
+			#then, we append it to the list file and refresh, piece of cake
+			servers_file = open(ServersFile, "a")
+			servers_file.write(new_line)
+			servers_file.close()
+
+			#last step, refresh
+			self.refresh()
+
 		return True
 
 
 	#===
 	#Function that creates a line to be inserted into the file	
 	def buildTxtLine(self, name, address, type):
+		name = name.replace("|", "=")	#will do for instance
 		return name.strip() + "|" + address.strip() + "|" + type.strip() + "\n"
 		
 	
