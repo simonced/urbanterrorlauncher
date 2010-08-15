@@ -64,8 +64,8 @@ class PlayersToolTips(TreeViewTooltips):
 			tooltip += "SERVER UNREACHABLE\n"		
 			
 		return tooltip
-    
-    
+
+
 
 #================
 # The GUI
@@ -196,11 +196,11 @@ class Utl:
 		self.play_bt = gtk.Button("Play")
 		self.play_bt.connect("clicked", self.play)
 		row_treeBts.pack_end(self.play_bt, False, False, PaddingDefault)
-
+		
 		self.refresh_bt = gtk.Button("Refresh")
 		self.refresh_bt.connect("clicked", self.refresh)
 		row_treeBts.pack_end(self.refresh_bt, False, False, PaddingDefault)
-
+		
 		layer.pack_start(row_treeBts, False, False, PaddingDefault)
 		
 		#Future containers for the bottom part
@@ -221,7 +221,7 @@ class Utl:
 		self.server_address = gtk.Entry()
 		row2.pack_start(self.server_address, True, True, PaddingDefault)
 		bloc_down_left.pack_start(row2, False, False, PaddingDefault)
-
+		
 		row1 = gtk.HBox()
 		label_name = gtk.Label("Server Alias")
 		label_name.set_alignment(0.9, 0.5)	#lign right
@@ -239,7 +239,7 @@ class Utl:
 			self.game_type.append_text(type)
 		row3.pack_start(self.game_type, False, False, PaddingDefault)
 		bloc_down_left.pack_start(row3, False, False, PaddingDefault)
-
+		
 		
 		row_add = gtk.HBox()
 		bt_add = gtk.Button("Save")
@@ -493,13 +493,15 @@ class Utl:
 			launch_cmd = self.urtExec + " +connect " + model.get(iter, 1)[0]
 		else:
 			launch_cmd = self.urtExec
+		
+		# === LAUNCHING THE GAME ===
 		print("launching game with command : " + launch_cmd)
-
 		args = shlex.split(launch_cmd)
 		logs = open("logs.txt", "w")
-		p = subprocess.call(args, stderr=logs)
+		subprocess.call(args, stderr=logs)
 		logs.close()
-
+		
+		# === ANALYSIS OF LOGS ===
 		logs = open("logs.txt")
 		server_connected = []
 		#todo : analyse the logs
@@ -510,7 +512,10 @@ class Utl:
 		logs.close()
 		#no need of logs anymore
 		os.remove("logs.txt")
-
+		
+		#we count the new entries
+		new_servers = 0
+		
 		#analysis of the played server(s)
 		for server in set(server_connected):
 			if ':' in server:
@@ -521,9 +526,6 @@ class Utl:
 				server += ":"+str(DEFAULT_PORT)	#simple change for insertion few lines under
 				#only in case the port is not specified, unlikely should not happen
 
-			#TODO checking that this server address doesn't already exists
-			#have to be sure all servers in the file have the port specified
-			#should be checked at manual add process, TODO
 			conn = UTSQ.Utsq(serv_addr, int(serv_port) )
 			if conn.request:
 				host_name = conn.status['sv_hostname']
@@ -531,16 +533,36 @@ class Utl:
 				host_name = "HOST WAS UNREACHABLE AT QUERY TIME"
 			conn.close()
 			
-			#new line format
-			new_line = self.buildTxtLine(host_name, server, "AUTO")
-			#then, we append it to the list file and refresh, piece of cake
-			servers_file = open(ServersFile, "a")
-			servers_file.write(new_line)
-			servers_file.close()
-
-			#last step, refresh
+			
+			#we need to check in the model (for each line) if this server address already exists
+			already = False
+			for line in self.servers_list:
+				current = line[1]
+				#let's be sure we have the full address
+				if ":" not in current:
+					current = current + ":" + str(DEFAULT_PORT)
+					
+				#then we can check
+				if current == server:
+					#one server at least corresponds, we can skip then
+					already = True
+					break
+			
+			#new server? we add it
+			if not already:
+				#new line format
+				new_line = self.buildTxtLine(host_name, server, "AUTO")
+				#then, we append it to the list file and refresh, piece of cake
+				servers_file = open(ServersFile, "a")
+				servers_file.write(new_line)
+				servers_file.close()
+				
+				new_servers = new_servers + 1
+				
+		#last step, refresh if needed
+		if new_servers>0:
 			self.refresh()
-
+		
 		return True
 
 
