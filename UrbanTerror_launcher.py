@@ -7,7 +7,7 @@ simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.7.1"
+__version__="0.7.2"
 
 #gui import - GTK
 import pygtk
@@ -22,10 +22,8 @@ import subprocess, shlex
 #sub tools - URT specific
 import UrbanTerror_server_query as UTSQ
 import UrbanTerror_colors_tools as UTCT
+from PlayersTooltips import PlayersToolTips
 from UrtLauncherThreads import ServersRefresh
-
-#tooltips lib
-from TreeViewTooltips import TreeViewTooltips	#great tooltips lib
 
 
 Version = __version__
@@ -40,38 +38,6 @@ DEFAULT_PORT = 27960
 UrtExec = "/home/jeux/UrbanTerror/1-ut-play.sh"
 ConfigFile = "UrbanTerror_launcher.cfg"
 
-
-#================
-# we generalise the great class TreeViewTooltips
-#================
-class PlayersToolTips(TreeViewTooltips):
-
-	#Constructor
-	def __init__(self):
-		#Will be updated at server status request at the same time as the window
-		self.players = {}
-		
-		TreeViewTooltips.__init__(self)
-		self.label.set_use_markup(False)	#to prevent wrong parsing from players names
-
-	# 2. overriding get_tooltip()
-	def get_tooltip(self, view_, column_, path_):
-		tooltip = ""
-		
-		try:
-			
-			address = view_.get_model()[path_[0]][1]
-			loop = 0
-			for player in self.players[address]:
-				tooltip += player.split('"')[1] + "\n"
-				loop += 1
-				if loop>6:
-					tooltip += "..."
-					break
-		except:
-			tooltip += "SERVER UNREACHABLE\n"		
-			
-		return tooltip
 
 
 #================
