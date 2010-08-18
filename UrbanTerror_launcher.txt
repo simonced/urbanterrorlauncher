@@ -6,7 +6,7 @@ Ramb test Server|daffy.clanwtf.net:30000|ICY
 Clan *:3 Japan|182.163.58.35|TS
 Urban Terror Japan|112.68.66.203|TS
 Clan tR 2nd|112.70.120.44:27961|TS
-WTF - Call of Nooby|64.156.192.169:27964|TS
-WTF - Noobys Heaven|64.156.193.115:27963|CTF
 **1up Icy Jumps Server**|208.43.15.8:27960|ICY
 localhost|127.0.0.1|FFA
+PaladinWarriors Urban Terror 4.1|208.43.15.167:27960|TS
+wTf - ^5n00bsy^3b00bsy ^7Heaven|64.156.192.169:27960|AUTO

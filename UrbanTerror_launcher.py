@@ -4,19 +4,27 @@
 """
 Simonced Urban Terror Launcher
 simonced@gmail.com
-Thgis is a tool to save your prefered servers you play often on.
+This is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.7"
+__version__="0.7.1"
 
+#gui import - GTK
 import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
+
+#system and re imports
 import os, re
 import subprocess, shlex
+
+#sub tools - URT specific
 import UrbanTerror_server_query as UTSQ
 import UrbanTerror_colors_tools as UTCT
+from UrtLauncherThreads import ServersRefresh
+
+#tooltips lib
 from TreeViewTooltips import TreeViewTooltips	#great tooltips lib
 
 
@@ -46,7 +54,6 @@ class PlayersToolTips(TreeViewTooltips):
 		TreeViewTooltips.__init__(self)
 		self.label.set_use_markup(False)	#to prevent wrong parsing from players names
 
-
 	# 2. overriding get_tooltip()
 	def get_tooltip(self, view_, column_, path_):
 		tooltip = ""
@@ -66,7 +73,6 @@ class PlayersToolTips(TreeViewTooltips):
 		return tooltip
 
 
-
 #================
 # The GUI
 #================
@@ -75,13 +81,16 @@ class Utl:
 	#Constructeur
 	def __init__(self):
 		
+		gobject.threads_init()	#threads for GTK
+		
 		#default values, can be changed by the config
 		self.UrtExec = UrtExec
 		
+		#loading the cfg file that repleaces some values if needed
 		self.loadCfg()
 
 		#basic vars used in the GUI
-		self.players = {}	#empty dict, the first key is the server address, then a list of players
+		self.players = {}	#empty dict, the key is the server address, then a list of players
 
 		#GUI creation starting here		
 		self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -116,8 +125,6 @@ class Utl:
 		# 6 Alias (input from user, not really needed)
 		# 7 file line number for edit or deletion
 
-		#inserting the data from the file
-		self.loadFile(False)
 		#display object (TreeView)
 		self.tree = gtk.TreeView(self.servers_list)
 
@@ -303,6 +310,10 @@ class Utl:
 		#----------
 		self.win.add(layer)
 		self.win.show_all()
+		
+		#init of the GUI with datas from servers
+		self.refresh()
+		
 		gtk.main()
 	
 
@@ -340,13 +351,13 @@ class Utl:
 	#===
 	#the click on the refresh button
 	def refresh(self, data=None):
-		self.statusBar.push(1, "Refreshing the servers list, please wait...")
-		self.win.queue_draw()
-		#How to refresh this damn status bar?
-
-		#anyway, we return the load status
-		return self.loadFile()
 		
+		self.statusBar.push(1, "Refreshing the servers list, please wait...")
+		t = ServersRefresh(self)
+		ok = t.start()
+		
+		return ok
+	
 	
 	#===
 	#loading the content of the file with the servers inside
@@ -367,7 +378,8 @@ class Utl:
 
 		#we clean the list (already in memory, unlike widgets)
 		self.servers_list.clear()
-			
+		self.players = {}	#empty the players list
+		
 		#then we open the file and fill in the list			
 		f = open(ServersFile, "r")
 		loop = 0
@@ -410,9 +422,6 @@ class Utl:
 			loop = loop + 1
 
 		f.close()
-	
-		if init_:
-			self.statusBar.push(1, "Servers list updated")
 
 		return True
 	
