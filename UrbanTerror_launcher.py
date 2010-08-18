@@ -47,9 +47,9 @@ ConfigFile = "UrbanTerror_launcher.cfg"
 class PlayersToolTips(TreeViewTooltips):
 
 	#Constructor
-	def __init__(self, players_):
-		#we get a link to the players we'll display in the tooltip
-		self.players = players_
+	def __init__(self):
+		#Will be updated at server status request at the same time as the window
+		self.players = {}
 		
 		TreeViewTooltips.__init__(self)
 		self.label.set_use_markup(False)	#to prevent wrong parsing from players names
@@ -59,12 +59,13 @@ class PlayersToolTips(TreeViewTooltips):
 		tooltip = ""
 		
 		try:
+			
 			address = view_.get_model()[path_[0]][1]
 			loop = 0
 			for player in self.players[address]:
 				tooltip += player.split('"')[1] + "\n"
 				loop += 1
-				if loop>=6:
+				if loop>6:
 					tooltip += "..."
 					break
 		except:
@@ -181,9 +182,9 @@ class Utl:
 		self.tree.connect("row-activated", self.play)
 		
 		#tree tooltips
-		playtt = PlayersToolTips(self.players)
-		playtt.add_view(self.tree)
-				
+		self.playtt = PlayersToolTips()
+		self.playtt.add_view(self.tree)
+		
 		
 		#we need a scroll pane for the tree!
 		scroll = gtk.ScrolledWindow()
@@ -406,7 +407,8 @@ class Utl:
 				mapname = utsq_cli.status['mapname']
 				servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
 				#we save at the same time the list of players online for this address ;)
-				self.players[address] = utsq_cli.clients
+				self.players[address] = self.playtt.players[address] = utsq_cli.clients
+				
 			else:
 				#case we can't querry the server
 				players = "ERR"
@@ -415,7 +417,7 @@ class Utl:
 			
 			#update of the model
 			self.servers_list.append( (servername, address, type, players, mapname, color, conf_name, loop ) )
-
+			
 			utsq_cli.close()
 
 			#to keep track of the line number
