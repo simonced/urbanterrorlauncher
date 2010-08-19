@@ -21,7 +21,6 @@ import subprocess, shlex
 
 #sub tools - URT specific
 import UrbanTerror_server_query as UTSQ
-import UrbanTerror_colors_tools as UTCT
 from PlayersTooltips import PlayersToolTips
 from UrtLauncherThreads import ServersRefresh
 
