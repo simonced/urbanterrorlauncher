@@ -28,17 +28,8 @@ from UrtLauncherThreads import ServersRefresh
 
 Version = __version__
 PaddingDefault = 5
-GameTypes = ('FFA', 'TDM', 'TS', 'CTF', 'BOMB', 'ICY')
-GameColors = {'FFA':'#FFFCCC', 'TDM':'#FFEBCC', 'TS':'#FFE7CC', 'CTF':'#FFCCFD', 'BOMB':'#FFCCCC', 'ICY':'#CCFEFF'}
-
-ServersFile = "UrbanTerror_launcher.txt"
-DEFAULT_PORT = 27960
-
-#the path to the exec file of the game, overrides the default setting bellow
-UrtExec = "/home/jeux/UrbanTerror/1-ut-play.sh"
-ConfigFile = "UrbanTerror_launcher.cfg"
-
-
+#common configuration is here
+import UrtLauncherConfig as UTCFG
 
 #================
 # The GUI
@@ -51,7 +42,7 @@ class Utl:
 		gobject.threads_init()	#threads for GTK
 		
 		#default values, can be changed by the config
-		self.UrtExec = UrtExec
+		self.UrtExec = UTCFG.UrtExec
 		
 		#loading the cfg file that repleaces some values if needed
 		self.loadCfg()
@@ -209,7 +200,7 @@ class Utl:
 		row3.pack_start(label_types, False, False, PaddingDefault)
 		#preparing the list
 		self.game_type = gtk.combo_box_new_text()
-		for type in GameTypes:
+		for type in UTCFG.GameTypes:
 			self.game_type.append_text(type)
 		row3.pack_start(self.game_type, False, False, PaddingDefault)
 		bloc_down_left.pack_start(row3, False, False, PaddingDefault)
@@ -278,11 +269,14 @@ class Utl:
 		self.win.add(layer)
 		self.win.show_all()
 		
+		gtk.gdk.threads_enter()
+		
 		#init of the GUI with datas from servers
 		self.refresh()
 		
 		gtk.main()
-	
+		gtk.gdk.threads_leave()
+		
 
 	#===		
 	#on quitte l'appli
@@ -292,6 +286,21 @@ class Utl:
 
 
 	#===
+	#the click on the refresh button
+	def refresh(self, data=None):
+		#once loaded, we clean the input fields
+		self.server_address.set_text("")
+		self.server_name.set_text("")
+		self.game_type.set_active(-1)
+		self.del_bt.set_sensitive(False)
+
+		t = ServersRefresh(self)
+		ok = t.start()
+		
+		return ok
+	
+	
+	#===
 	#function to insert the new server in our list
 	def add(self, data_=None):
 		
@@ -299,12 +308,12 @@ class Utl:
 		type_choisi=""
 		index = self.game_type.get_active()
 		if index>=0:
-			type_choisi = GameTypes[index]
+			type_choisi = UTCFG.GameTypes[index]
 		#text line to be instered
 		line = self.buildTxtLine(self.server_name.get_text(), self.server_address.get_text(), type_choisi)
 
 		try:
-			file = open(ServersFile, "a")	#append mode
+			file = open(UTCFG.ServersFile, "a")	#append mode
 			file.write(line)
 			file.close()
 
@@ -314,85 +323,6 @@ class Utl:
 		#we delete the previous line if needed, this delete call also refreshes the Tree model
 		self.delete(None)
 
-
-	#===
-	#the click on the refresh button
-	def refresh(self, data=None):
-		
-		self.statusBar.push(1, "Refreshing the servers list, please wait...")
-		t = ServersRefresh(self)
-		ok = t.start()
-		
-		return ok
-	
-	
-	#===
-	#loading the content of the file with the servers inside
-	# @param file_ the file to load
-	# @param init_ to clean the input fields or not?
-	def loadFile(self, init_=True):
-		#are we asked to clean the input fields?
-		if init_:
-			#once loaded, we clean the input fields
-			self.server_address.set_text("")
-			self.server_name.set_text("")
-			self.game_type.set_active(-1)
-			self.del_bt.set_sensitive(False)
-
-		#if server files not found, we skip the loading process
-		if not os.path.isfile(ServersFile):
-			return False
-
-		#we clean the list (already in memory, unlike widgets)
-		self.servers_list.clear()
-		self.players = {}	#empty the players list
-		
-		#then we open the file and fill in the list			
-		f = open(ServersFile, "r")
-		loop = 0
-		for line in f:
-			(conf_name, address, type) = line.strip().split("|")
-			if type in GameColors:
-				color = GameColors[type]
-			else:
-				color = "#FFFFFF"	#simple white color
-				
-			#connextion to request the number of players
-			try:
-				(address1, port2) = address.split(":")
-			except:
-				address1 = address
-				port2 = DEFAULT_PORT
-
-			#server query for players
-			utsq_cli = UTSQ.Utsq(address1, int(port2))
-			if utsq_cli.request:
-				players = str(len(utsq_cli.clients)) + " / " + str(utsq_cli.status['sv_maxclients'])
-				if len(utsq_cli.clients)>0 and len(utsq_cli.clients)<utsq_cli.status['sv_maxclients']:
-					players = "<b>" + players + "</b>"
-				mapname = utsq_cli.status['mapname']
-				servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
-				#we save at the same time the list of players online for this address ;)
-				self.players[address] = self.playtt.players[address] = utsq_cli.clients
-				
-			else:
-				#case we can't querry the server
-				players = "ERR"
-				mapname = "ERR"
-				servername = "<i>" + conf_name + "</i>"
-			
-			#update of the model
-			self.servers_list.append( (servername, address, type, players, mapname, color, conf_name, loop ) )
-			
-			utsq_cli.close()
-
-			#to keep track of the line number
-			loop = loop + 1
-
-		f.close()
-
-		return True
-	
 
 	#===
 	#editing a line from the tree view
@@ -418,7 +348,7 @@ class Utl:
 		#loop for game types
 		loop = 0
 		index = -1
-		for type in GameTypes:
+		for type in UTCFG.GameTypes:
 			if type == model.get(iter, 2)[0].strip():
 				index = loop
 				break
@@ -530,7 +460,7 @@ class Utl:
 				#new line format
 				new_line = self.buildTxtLine(host_name, server, "AUTO")
 				#then, we append it to the list file and refresh, piece of cake
-				servers_file = open(ServersFile, "a")
+				servers_file = open(UTCFG.ServersFile, "a")
 				servers_file.write(new_line)
 				servers_file.close()
 				
@@ -554,11 +484,11 @@ class Utl:
 	#Function to load the config and replace the default values
 	def loadCfg(self):
 		#config file exists?
-		if not os.path.isfile(ConfigFile):
+		if not os.path.isfile(UTCFG.ConfigFile):
 			return False
 		#TODO create a default file that the user can change later
 		
-		f = open(ConfigFile)
+		f = open(UTCFG.ConfigFile)
 		for line in f:
 			#non data line, we skip
 			if "=" not in line:
