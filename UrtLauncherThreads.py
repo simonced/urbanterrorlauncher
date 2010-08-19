@@ -3,7 +3,7 @@
 '''
 Simonced Urban Terror Launcher
 simonced@gmail.com
-This is a tool to be used by UrbanTErrorLauncher.
+This is a tool to be used by UrbanTerrorLauncher.
 '''
 
 import gtk

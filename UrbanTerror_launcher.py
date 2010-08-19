@@ -340,7 +340,7 @@ class Utl:
 		model_players.clear()
 		if address in self.players:
 			for player in self.players[ address ]:
-				(score_full, name ) = player.split('"', 1)
+				(score_full, name ) = player.split('"')[0:2]
 				(score, ping) = score_full.split(' ', 1)
 				model_players.append( (name, int(score.strip()), int(ping.strip()), '#FFFFFF') )
 		
@@ -371,7 +371,7 @@ class Utl:
 		servers_file_line = model.get(iter, 7)[0]
 		try:
 			new_file = ""
-			f = open(ServersFile, "r")
+			f = open(UTCFG.ServersFile, "r")
 			loop = 0
 			for line in f:
 				if loop != servers_file_line:
@@ -380,7 +380,7 @@ class Utl:
 			f.close()
 
 			#opening in write only, to replace all the content
-			f = open(ServersFile, "w")
+			f = open(UTCFG.ServersFile, "w")
 			f.write(new_file)
 			f.close()
 
@@ -428,8 +428,8 @@ class Utl:
 				(serv_addr, serv_port) = server.strip().split(':', 1)
 			else:
 				serv_addr = server
-				serv_port = DEFAULT_PORT
-				server += ":"+str(DEFAULT_PORT)	#simple change for insertion few lines under
+				serv_port = UTCFG.DEFAULT_PORT
+				server += ":"+str(UTCFG.DEFAULT_PORT)	#simple change for insertion few lines under
 				#only in case the port is not specified, unlikely should not happen
 
 			conn = UTSQ.Utsq(serv_addr, int(serv_port) )
@@ -446,7 +446,7 @@ class Utl:
 				current = line[1]
 				#let's be sure we have the full address
 				if ":" not in current:
-					current = current + ":" + str(DEFAULT_PORT)
+					current = current + ":" + str(UTCFG.DEFAULT_PORT)
 					
 				#then we can check
 				if current == server:
