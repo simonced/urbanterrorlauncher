@@ -449,14 +449,10 @@ class Utl:
 			
 			#new server? we add it
 			if not already:
-				#TODO path to use fdb
-				
 				#new line format
 				new_line = self.buildTxtLine(host_name, server, "AUTO")
 				#then, we append it to the list file and refresh, piece of cake
-				servers_file = open(UTCFG.ServersFile, "a")
-				servers_file.write(new_line)
-				servers_file.close()
+				self.fdb.addLine(new_line)
 				
 				new_servers = new_servers + 1
 				
