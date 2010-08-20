@@ -7,7 +7,7 @@ simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.7.2"
+__version__="0.7.3"
 
 #gui import - GTK
 import pygtk
@@ -21,14 +21,15 @@ import subprocess, shlex
 
 #sub tools - URT specific
 import UrbanTerror_server_query as UTSQ
-from PlayersTooltips import PlayersToolTips
 from UrtLauncherThreads import ServersRefresh
-
+import FileDB
+from PlayersTooltips import PlayersToolTips
 
 Version = __version__
 PaddingDefault = 5
 #common configuration is here
 import UrtLauncherConfig as UTCFG
+
 
 #================
 # The GUI
@@ -49,10 +50,13 @@ class Utl:
 		#basic vars used in the GUI
 		self.players = {}	#empty dict, the key is the server address, then a list of players
 
+		#file object to manage the servers file
+		self.fdb = FileDB.FileManager(UTCFG.ServersFile)
+
 		#GUI creation starting here		
 		self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.win.set_border_width(5)
-		self.win.connect("destroy", self.quitter)
+		self.win.connect("destroy", self.quit)
 		self.win.set_title("Urban Terror Launcher v"+Version)
 		self.win.set_size_request(750, 600)
 		layer = gtk.VBox()
@@ -279,9 +283,12 @@ class Utl:
 
 	#===		
 	#on quitte l'appli
-	def quitter(self, data=None):
+	def quit(self, data=None):
 		self.win.destroy()
 		gtk.main_quit()
+		
+		#then, the servers file
+		self.fdb.close()
 
 
 	#===
@@ -300,31 +307,7 @@ class Utl:
 	
 	
 	#===
-	#function to insert the new server in our list
-	def add(self, data_=None):
-		
-		#les donnees saisies - le type de jeu
-		type_choisi=""
-		index = self.game_type.get_active()
-		if index>=0:
-			type_choisi = UTCFG.GameTypes[index]
-		#text line to be instered
-		line = self.buildTxtLine(self.server_name.get_text(), self.server_address.get_text(), type_choisi)
-
-		try:
-			file = open(UTCFG.ServersFile, "a")	#append mode
-			file.write(line)
-			file.close()
-
-		except:
-			print("ERROR WHILE SAVING THE FILE")
-
-		#we delete the previous line if needed, this delete call also refreshes the Tree model
-		self.delete(None)
-
-
-	#===
-	#editing a line from the tree view
+	#editing a line from the tree view (click)
 	def edit(self, tree, path=None, column=None):
 		(model, iter) = self.tree.get_selection().get_selected()
 		if iter==None:
@@ -334,7 +317,7 @@ class Utl:
 		address = model.get(iter, 1)[0]
 		self.server_address.set_text( address )
 		self.server_name.set_text( model.get(iter, 6)[0] )
-
+		
 		#full players list
 		model_players = self.players_tree.get_model()
 		model_players.clear()
@@ -353,36 +336,46 @@ class Utl:
 				break
 			loop += 1
 		self.game_type.set_active( index )
-
+		
 		#then, we can also activate the del button
 		self.del_bt.set_sensitive(True)
-
+		
 		return False
 		
+		
+	#===
+	#function to insert the new server in our list
+	def add(self, data_=None):
+		
+		#les donnees saisies - le type de jeu
+		type_choisi=""
+		index = self.game_type.get_active()
+		if index>=0:
+			type_choisi = UTCFG.GameTypes[index]
+		#text line to be inserted
+		line = self.buildTxtLine(self.server_name.get_text(), self.server_address.get_text(), type_choisi)
 
+		#adding a new server
+		self.fdb.addLine(line)
+
+		#we delete the previous line if needed, this delete call also refreshes the Tree model
+		if not self.delete(None):
+			#we still need to refresh
+			self.refresh()
+			
+		
 	#===
 	#deleting a line from the tree view
-	def delete(self, tree):
+	def delete(self, tree_):
 		(model, iter) = self.tree.get_selection().get_selected()
 		if iter==None:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
 			return False
 			
-		servers_file_line = model.get(iter, 7)[0]
+		
 		try:
-			new_file = ""
-			f = open(UTCFG.ServersFile, "r")
-			loop = 0
-			for line in f:
-				if loop != servers_file_line:
-					new_file += line
-				loop = loop + 1
-			f.close()
-
-			#opening in write only, to replace all the content
-			f = open(UTCFG.ServersFile, "w")
-			f.write(new_file)
-			f.close()
+			servers_file_line = model.get(iter, 7)[0]
+			self.fdb.delLine(servers_file_line)
 
 			return self.refresh()
 
@@ -456,6 +449,8 @@ class Utl:
 			
 			#new server? we add it
 			if not already:
+				#TODO path to use fdb
+				
 				#new line format
 				new_line = self.buildTxtLine(host_name, server, "AUTO")
 				#then, we append it to the list file and refresh, piece of cake

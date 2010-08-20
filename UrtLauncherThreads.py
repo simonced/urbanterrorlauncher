@@ -36,7 +36,7 @@ class ServersRefresh(Thread):
 	def run(self):
 		
 		#if server files not found, we skip the loading process
-		if not os.path.isfile(UTCFG.ServersFile):
+		if not self.win.fdb:
 			return False
 
 		#we clean the list (already in memory, unlike widgets)
@@ -46,11 +46,10 @@ class ServersRefresh(Thread):
 		self.win.playtt.players = {}	#same for the tooltip list
 		
 		#then we open the file and fill in the list			
-		f = open(UTCFG.ServersFile, "r")
+		
 		loop = 0
-		lines = f.readlines()
+		lines = self.win.fdb.getAllLines()
 		total_loops = len(lines)
-		f.close()
 		for line in lines:
 			(conf_name, address, type) = line.strip().split("|")
 			if type in UTCFG.GameColors:
@@ -110,6 +109,7 @@ class ServersRefresh(Thread):
 
 	#===
 	#Same for the last status bar message
+	#HAVE to return FALSE
 	#===
 	def updateStatusBar(self, msg_):
 		self.win.statusBar.push(1, msg_ )
