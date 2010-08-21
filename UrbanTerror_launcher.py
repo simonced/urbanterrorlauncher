@@ -385,10 +385,7 @@ class Utl:
 		try:
 			servers_file_line = model.get(iter, 7)[0]
 			self.fdb.delLine(servers_file_line)
-			
-			self.servers_list.remove(iter)
-			self.init()
-			self.statusBar.push(1, "Server deleted")
+			self.refresh()
 			return True
 			
 		

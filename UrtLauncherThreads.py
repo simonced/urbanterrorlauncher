@@ -51,44 +51,15 @@ class ServersRefresh(Thread):
 		lines = self.win.fdb.getAllLines()
 		total_loops = len(lines)
 		for line in lines:
-			(conf_name, address, type) = line.strip().split("|")
-			if type in UTCFG.GameColors:
-				color = UTCFG.GameColors[type]
-			else:
-				color = "#FFFFFF"	#simple white color
-				
-			#connection to request the number of players
-			try:
-				(address1, port2) = address.split(":")
-			except:
-				address1 = address
-				port2 = UTCFG.DEFAULT_PORT
-
-			#server query for players
-			utsq_cli = UTSQ.Utsq(address1, int(port2))
-			if utsq_cli.request:
-				players = str(len(utsq_cli.clients)) + " / " + str(utsq_cli.status['sv_maxclients'])
-				if len(utsq_cli.clients)>0 and len(utsq_cli.clients)<utsq_cli.status['sv_maxclients']:
-					players = "<b>" + players + "</b>"
-				mapname = utsq_cli.status['mapname']
-				servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
-				#we save at the same time the list of players online for this address ;)
-				self.win.players[address] = self.win.playtt.players[address] = utsq_cli.clients
-				
-			else:
-				#case we can't query the server
-				players = "ERR"
-				mapname = "ERR"
-				servername = "<i>" + conf_name + "</i>"
-			
-			utsq_cli.close()
-			
 			#to keep track of the line number
 			loop = loop + 1
 			
+			#refresh of one line ;)
+			data = self.refreshOneLine(line, loop)
+			
 			#update of the model
 			gobject.idle_add(self.updateList, \
-				(servername, address, type, players, mapname, color, conf_name, loop), \
+				data, \
 				loop, \
 				total_loops)
 			
@@ -114,3 +85,42 @@ class ServersRefresh(Thread):
 	def updateStatusBar(self, msg_):
 		self.win.statusBar.push(1, msg_ )
 		return False
+	
+	#===
+	#one line refresh, can be used out of the thread in the add process
+	#===
+	def refreshOneLine(self, line_, loop_):
+		(conf_name, address, type) = line_.strip().split("|")
+		if type in UTCFG.GameColors:
+			color = UTCFG.GameColors[type]
+		else:
+			color = "#FFFFFF"	#simple white color
+		
+		#connection to request the number of players
+		try:
+			(address1, port2) = address.split(":")
+		except:
+			address1 = address
+			port2 = UTCFG.DEFAULT_PORT
+		
+		#server query for players
+		utsq_cli = UTSQ.Utsq(address1, int(port2))
+		if utsq_cli.request:
+			players = str(len(utsq_cli.clients)) + " / " + str(utsq_cli.status['sv_maxclients'])
+			if len(utsq_cli.clients)>0 and len(utsq_cli.clients)<utsq_cli.status['sv_maxclients']:
+				players = "<b>" + players + "</b>"
+			mapname = utsq_cli.status['mapname']
+			servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
+			#we save at the same time the list of players online for this address ;)
+			self.win.players[address] = self.win.playtt.players[address] = utsq_cli.clients
+			
+		else:
+			#case we can't query the server
+			players = "ERR"
+			mapname = "ERR"
+			servername = "<i>" + conf_name + "</i>"
+		
+		utsq_cli.close()
+		
+		return (servername, address, type, players, mapname, color, conf_name, loop_)
+	

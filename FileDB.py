@@ -146,6 +146,9 @@ class FileManager:
 			while line:
 				if self.read_counter != line_num_:
 					new_file += line
+				else:
+					print "line to be deleted : %s" %(line,)
+				
 				#next line
 				line = self.getLine()
 				
