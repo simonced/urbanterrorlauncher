@@ -7,7 +7,7 @@ simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.7.3"
+__version__="0.7.4"
 
 #gui import - GTK
 import pygtk
@@ -289,20 +289,27 @@ class Utl:
 		
 		#then, the servers file
 		self.fdb.close()
-
-
+	
+	
 	#===
-	#the click on the refresh button
-	def refresh(self, data=None):
-		#once loaded, we clean the input fields
+	#simple init function for the input fields
+	def init(self):
 		self.server_address.set_text("")
 		self.server_name.set_text("")
 		self.game_type.set_active(-1)
 		self.del_bt.set_sensitive(False)
-
+		
+		return True
+	
+	
+	#===
+	#the click on the refresh button
+	def refresh(self, data=None):
+		#clean-up of input fields
+		self.init()
+		
 		t = ServersRefresh(self)
 		ok = t.start()
-		
 		return ok
 	
 	
@@ -347,7 +354,7 @@ class Utl:
 	#function to insert the new server in our list
 	def add(self, data_=None):
 		
-		#les donnees saisies - le type de jeu
+		#input data - game type
 		type_choisi=""
 		index = self.game_type.get_active()
 		if index>=0:
@@ -356,14 +363,16 @@ class Utl:
 		line = self.buildTxtLine(self.server_name.get_text(), self.server_address.get_text(), type_choisi)
 
 		#adding a new server
-		self.fdb.addLine(line)
-
+		ok = self.fdb.addLine(line)
+		
 		#we delete the previous line if needed, this delete call also refreshes the Tree model
 		if not self.delete(None):
 			#we still need to refresh
 			self.refresh()
-			
 		
+		return ok
+	
+	
 	#===
 	#deleting a line from the tree view
 	def delete(self, tree_):
@@ -376,9 +385,13 @@ class Utl:
 		try:
 			servers_file_line = model.get(iter, 7)[0]
 			self.fdb.delLine(servers_file_line)
-
-			return self.refresh()
-
+			
+			self.servers_list.remove(iter)
+			self.init()
+			self.statusBar.push(1, "Server deleted")
+			return True
+			
+		
 		except:
 			print( "ERROR AT DELETION IN THE FILE" )
 			return False
