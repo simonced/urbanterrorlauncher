@@ -113,14 +113,16 @@ class ServersRefresh(Thread):
 			servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
 			#we save at the same time the list of players online for this address ;)
 			self.win.players[address] = self.win.playtt.players[address] = utsq_cli.clients
+			raw_name = UTCT.raw_string( utsq_cli.status['sv_hostname'] )
 			
 		else:
 			#case we can't query the server
 			players = "ERR"
 			mapname = "ERR"
 			servername = "<i>" + conf_name + "</i>"
+			raw_name = UTCT.raw_string( conf_name )
 		
 		utsq_cli.close()
 		
-		return (servername, address, type, players, mapname, color, conf_name, loop_)
+		return (servername, address, type, players, mapname, color, conf_name, loop_, raw_name)
 	

@@ -38,6 +38,13 @@ def console_colors_to_markup(console_txt_):
 	return result
 
 
+#===
+#Removes the color marks in the text specified (like ^1 or ^3...)
+def raw_string(console_txt_):
+	result = re.sub("\^\d{1}", "", console_txt_)
+	return result
+
+
 if __name__ == "__main__":
 	#sample server name
 	sample = "^1test ^2with ^5colors <b>Woot</b>"

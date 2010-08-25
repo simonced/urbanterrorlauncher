@@ -7,7 +7,7 @@ simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.7.4"
+__version__="0.7.5"
 
 #gui import - GTK
 import pygtk
@@ -22,6 +22,7 @@ import subprocess, shlex
 #sub tools - URT specific
 import UrbanTerror_server_query as UTSQ
 from UrtLauncherThreads import ServersRefresh
+import UrbanTerror_colors_tools as UTCOLORS
 import FileDB
 from PlayersTooltips import PlayersToolTips
 
@@ -74,10 +75,11 @@ class Utl:
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
-			gobject.TYPE_INT)
+			gobject.TYPE_INT,
+			str)
 
 		# model :
-		# 0 name
+		# 0 name (markup)
 		# 1 address
 		# 2 type
 		# 3 players
@@ -85,6 +87,7 @@ class Utl:
 		# 5 color (GUI info)
 		# 6 Alias (input from user, not really needed)
 		# 7 file line number for edit or deletion
+		# 8 raw name of the server without markup or colors to be sorted in the name column of the treeview
 
 		#display object (TreeView)
 		self.tree = gtk.TreeView(self.servers_list)
@@ -127,7 +130,7 @@ class Utl:
 		#search ok (#name and type only)
 		self.tree.set_search_column(0)	#name search only
 		#sort ok
-		column_name.set_sort_column_id(0)
+		column_name.set_sort_column_id(8)	#using the raw name of the server for sorting
 		column_type.set_sort_column_id(2)
 		column_players.set_sort_column_id(3)
 		#the number is just an order id, if 2 columns sort have same ideas, the sort will effect both columns
@@ -398,16 +401,16 @@ class Utl:
 	#deleting a line from the tree view
 	def play(self, tree, path=None, column=None):
 		(model, iter) = self.tree.get_selection().get_selected()
+		launch_cmd = [self.UrtExec,]
 		if iter!=None:
-			launch_cmd = self.urtExec + " +connect " + model.get(iter, 1)[0]
-		else:
-			launch_cmd = self.urtExec
+			launch_cmd.append( "+connect" )
+			launch_cmd.append( model.get(iter, 1)[0] )
 		
 		# === LAUNCHING THE GAME ===
-		print("launching game with command : " + launch_cmd)
-		args = shlex.split(launch_cmd)
+		print "launching game with command : " + " ".join(launch_cmd)
 		logs = open("logs.txt", "w")
-		subprocess.call(args, stderr=logs)
+		exec_path = os.path.dirname(self.UrtExec)
+		subprocess.call(launch_cmd, cwd=exec_path, stderr=logs)	#blocking call for log output
 		logs.close()
 		
 		# === ANALYSIS OF LOGS ===
@@ -459,7 +462,8 @@ class Utl:
 			
 			#new server? we add it
 			if not already:
-				#new line format
+				#new line formating
+				host_name = UTCOLORS.raw_string( host_name )
 				new_line = self.buildTxtLine(host_name, server, "AUTO")
 				#then, we append it to the list file and refresh, piece of cake
 				self.fdb.addLine(new_line)
@@ -496,7 +500,7 @@ class Utl:
 			(k, v) = line.split("=")
 			#replace the actual default value
 			if k=="UrtExec":
-				self.urtExec=v.strip()
+				self.UrtExec=v.strip()
 		f.close()
 		
 		return True
