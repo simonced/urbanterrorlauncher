@@ -9,6 +9,7 @@ This tools is a tool to request the q3 like servers about their status online (m
 """
 
 import socket
+import time
 
 class Utsq:
 	
@@ -24,12 +25,17 @@ class Utsq:
 		self.request = False	#allow client to know if the send request passed or failed
 		self.host = host
 		self.port = port
+		self.ping = 0	#time the server answers in
 		
 		try:
 			self.sock.connect( (host, port) )
 			self.connected = True
 			self.sock.settimeout(1.0)  # timeout of 1 second
+			
+			#patch to get the ping value
+			start = time.clock()
 			self.getall()
+			self.ping = time.clock() - start
 			
 		except socket.error:
 			print "Error at connexio with %s:%s\n" % (host, port)

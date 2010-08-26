@@ -41,12 +41,9 @@ class ServersRefresh(Thread):
 
 		#we clean the list (already in memory, unlike widgets)
 		self.win.servers_list.clear()
-		
 		self.win.players = {}	#empty the players list
-		self.win.playtt.players = {}	#same for the tooltip list
 		
 		#then we open the file and fill in the list			
-		
 		loop = 0
 		lines = self.win.fdb.getAllLines()
 		total_loops = len(lines)
@@ -86,8 +83,10 @@ class ServersRefresh(Thread):
 		self.win.statusBar.push(1, msg_ )
 		return False
 	
+	
 	#===
 	#one line refresh, can be used out of the thread in the add process
+	#but hanged so still used only here
 	#===
 	def refreshOneLine(self, line_, loop_):
 		(conf_name, address, type) = line_.strip().split("|")
@@ -112,8 +111,10 @@ class ServersRefresh(Thread):
 			mapname = utsq_cli.status['mapname']
 			servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
 			#we save at the same time the list of players online for this address ;)
-			self.win.players[address] = self.win.playtt.players[address] = utsq_cli.clients
+			self.win.players[address] = utsq_cli.clients
 			raw_name = UTCT.raw_string( utsq_cli.status['sv_hostname'] )
+			#plus, we need the ping time
+			ping = int( str(utsq_cli.ping*1000).split('.')[0][0:3] )
 			
 		else:
 			#case we can't query the server
@@ -121,8 +122,12 @@ class ServersRefresh(Thread):
 			mapname = "ERR"
 			servername = "<i>" + conf_name + "</i>"
 			raw_name = UTCT.raw_string( conf_name )
+			ping = 999
 		
+		
+		
+		#closing the socket with the server
 		utsq_cli.close()
 		
-		return (servername, address, type, players, mapname, color, conf_name, loop_, raw_name)
+		return (servername, address, type, players, mapname, color, conf_name, loop_, raw_name, ping)
 	

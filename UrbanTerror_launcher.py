@@ -7,7 +7,7 @@ simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.7.5"
+__version__="0.7.6"
 
 #gui import - GTK
 import pygtk
@@ -76,7 +76,8 @@ class Utl:
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
 			gobject.TYPE_INT,
-			str)
+			str,
+			int)
 
 		# model :
 		# 0 name (markup)
@@ -88,7 +89,7 @@ class Utl:
 		# 6 Alias (input from user, not really needed)
 		# 7 file line number for edit or deletion
 		# 8 raw name of the server without markup or colors to be sorted in the name column of the treeview
-
+		# 9 ping of the server
 		#display object (TreeView)
 		self.tree = gtk.TreeView(self.servers_list)
 
@@ -100,6 +101,7 @@ class Utl:
 		column_address = gtk.TreeViewColumn('Address', cell, text=1, background=5)
 		column_type = gtk.TreeViewColumn('Type', cell, text=2, background=5)
 		column_players = gtk.TreeViewColumn('Players', cell, markup=3, background=5)
+		column_ping = gtk.TreeViewColumn('Ping', cell, text=9, background=5)
 		column_map = gtk.TreeViewColumn('Map', cell, text=4, background=5)
 		
 		#adding the columns to the treeview
@@ -107,6 +109,7 @@ class Utl:
 		self.tree.append_column(column_address)
 		self.tree.append_column(column_type)
 		self.tree.append_column(column_players)
+		self.tree.append_column(column_ping)
 		self.tree.append_column(column_map)
 
 		#attach to the columns
@@ -114,12 +117,14 @@ class Utl:
 		column_address.pack_start(cell, True)
 		column_type.pack_start(cell, False)
 		column_players.pack_start(cell, False)
+		column_ping.pack_start(cell, False)
 		column_map.pack_start(cell, False)
 		#text parameter on the column
 		column_name.add_attribute(cell, 'text', 0)
 		column_address.add_attribute(cell, 'text', 1)
 		column_type.add_attribute(cell, 'text', 2)
 		column_players.add_attribute(cell, 'text', 3)
+		column_ping.add_attribute(cell, 'text', 9)
 		column_map.add_attribute(cell, 'text', 4)
 		#columns ihm props
 		column_name.set_resizable(True)
@@ -127,27 +132,23 @@ class Utl:
 		column_address.set_resizable(True)
 		column_address.set_sizing(gtk.TREE_VIEW_COLUMN_GROW_ONLY)
 		
-		#search ok (#name and type only)
+		#search ok 
 		self.tree.set_search_column(0)	#name search only
 		#sort ok
 		column_name.set_sort_column_id(8)	#using the raw name of the server for sorting
 		column_type.set_sort_column_id(2)
 		column_players.set_sort_column_id(3)
+		column_ping.set_sort_column_id(9)
 		#the number is just an order id, if 2 columns sort have same ideas, the sort will effect both columns
 		column_name.clicked()	#column 0 sorted from beginning
-
+		
 		column_name.set_min_width(200)		#sizes to make it look better
 		column_address.set_min_width(200)		#sizes to make it look better
 		column_map.set_min_width(180)
-
+		
 		#signal on click of a line
 		self.tree.connect("cursor-changed", self.edit)
 		self.tree.connect("row-activated", self.play)
-		
-		#tree tooltips
-		self.playtt = PlayersToolTips()
-		self.playtt.add_view(self.tree)
-		
 		
 		#we need a scroll pane for the tree!
 		scroll = gtk.ScrolledWindow()
