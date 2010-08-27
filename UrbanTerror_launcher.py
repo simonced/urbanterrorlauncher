@@ -24,7 +24,7 @@ import UrbanTerror_server_query as UTSQ
 from UrtLauncherThreads import ServersRefresh
 import UrbanTerror_colors_tools as UTCOLORS
 import FileDB
-from PlayersTooltips import PlayersToolTips
+
 
 Version = __version__
 PaddingDefault = 5
