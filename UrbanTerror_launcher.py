@@ -143,7 +143,7 @@ class Utl:
 		column_name.clicked()	#column 0 sorted from beginning
 		
 		column_name.set_min_width(200)		#sizes to make it look better
-		column_address.set_min_width(200)		#sizes to make it look better
+		column_address.set_min_width(160)		#sizes to make it look better
 		column_map.set_min_width(180)
 		
 		#signal on click of a line
