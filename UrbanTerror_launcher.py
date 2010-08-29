@@ -164,16 +164,19 @@ class Utl:
 		#then, few buttons that can act on the table rows
 		row_treeBts = gtk.HBox()
 		self.del_bt = gtk.Button("Delete")
+		self.del_bt.set_image(gtk.image_new_from_file("rsc/delete_ico.png"))
 		self.del_bt.set_sensitive(False)	#disabled button
 		self.del_bt.connect("clicked", self.delete)
 		row_treeBts.pack_end(self.del_bt, False, False, PaddingDefault)
 		
 		
 		self.play_bt = gtk.Button("Play")
+		self.play_bt.set_image(gtk.image_new_from_file("rsc/play_ico.png"))
 		self.play_bt.connect("clicked", self.play)
 		row_treeBts.pack_end(self.play_bt, False, False, PaddingDefault)
 		
 		self.refresh_bt = gtk.Button("Refresh")
+		self.refresh_bt.set_image(gtk.image_new_from_file("rsc/refresh_ico.png"))
 		self.refresh_bt.connect("clicked", self.refresh)
 		row_treeBts.pack_end(self.refresh_bt, False, False, PaddingDefault)
 		
@@ -219,6 +222,7 @@ class Utl:
 		
 		row_add = gtk.HBox()
 		bt_add = gtk.Button("Save")
+		bt_add.set_image(gtk.image_new_from_file("rsc/save_ico.png"))
 		bt_add.connect("clicked", self.add )
 		row_add.pack_end(bt_add, False, False, PaddingDefault)
 		bloc_down_left.pack_start(row_add, False, False, PaddingDefault)
