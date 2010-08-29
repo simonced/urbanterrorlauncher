@@ -23,6 +23,7 @@ import subprocess, shlex
 import UrbanTerror_server_query as UTSQ
 from UrtLauncherThreads import ServersRefresh
 import UrbanTerror_colors_tools as UTCOLORS
+import UrtLauncherGui as UTGUI
 import FileDB
 
 
@@ -56,16 +57,20 @@ class Utl:
 
 		#GUI creation starting here		
 		self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-		self.win.set_border_width(5)
+		#self.win.set_border_width(5)
 		self.win.connect("destroy", self.quit)
 		self.win.set_title("Urban Terror Launcher v"+Version)
-		self.win.set_size_request(750, 600)
-		layer = gtk.VBox()
+		self.win.set_size_request(770, 600)
 		
-		# == Section1 == Listing and launching
-		section1_title = gtk.Label("Servers list : ");
-		layer.pack_start(section1_title, False, False, PaddingDefault)
-
+		#creating tab container
+		notebook = gtk.Notebook()
+		self.win.add(notebook)
+		
+		#The first tab is for the servers
+		server_tab = gtk.VBox()
+		
+		# == Section1 == Listing and launching a server
+		
 		#model for the view (ListStore)
 		self.servers_list = gtk.ListStore(\
 			gobject.TYPE_STRING, \
@@ -144,7 +149,6 @@ class Utl:
 		
 		column_name.set_min_width(200)		#sizes to make it look better
 		column_address.set_min_width(160)		#sizes to make it look better
-		column_map.set_min_width(180)
 		
 		#signal on click of a line
 		self.tree.connect("cursor-changed", self.edit)
@@ -154,7 +158,7 @@ class Utl:
 		scroll = gtk.ScrolledWindow()
 		scroll.add(self.tree)
 		#last step, adding the tree in the window (maybe adding a scroll window between)
-		layer.pack_start(scroll, True, True, PaddingDefault)
+		server_tab.pack_start(scroll, True, True, PaddingDefault)
 
 
 		#then, few buttons that can act on the table rows
@@ -173,7 +177,7 @@ class Utl:
 		self.refresh_bt.connect("clicked", self.refresh)
 		row_treeBts.pack_end(self.refresh_bt, False, False, PaddingDefault)
 		
-		layer.pack_start(row_treeBts, False, False, PaddingDefault)
+		server_tab.pack_start(row_treeBts, False, False, PaddingDefault)
 		
 		#Future containers for the bottom part
 		bloc_down =  gtk.HBox(True)
@@ -266,14 +270,24 @@ class Utl:
 		
 		
 		#adding the 2 blocs in the window
-		layer.pack_start(bloc_down, False, False, PaddingDefault)
+		server_tab.pack_start(bloc_down, False, False, PaddingDefault)
 		
 		self.statusBar = gtk.Statusbar()
-		layer.pack_end(self.statusBar, False, False, PaddingDefault)
+		server_tab.pack_end(self.statusBar, False, False, PaddingDefault)
+		
+		#adding the server tab to the notebook
+		notebook.append_page(server_tab, UTGUI.createServersTabTitle() )
+		
+		#==========================
+		# === Section 2 === Buddies
+		#==========================
+		buddies_tab = gtk.HBox()
+		notebook.append_page(buddies_tab, UTGUI.createBuddiesTabTitle() )
+		
+		
 		
 		#la fenetre
 		#----------
-		self.win.add(layer)
 		self.win.show_all()
 		
 		gtk.gdk.threads_enter()
