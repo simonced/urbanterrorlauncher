@@ -210,6 +210,7 @@ class Utl:
 		
 		row3 = gtk.HBox()
 		label_types = gtk.Label("Game Type")
+		label_types.set_alignment(0.9, 0.5)
 		label_types.set_size_request(100, 25)
 		row3.pack_start(label_types, False, False, PaddingDefault)
 		#preparing the list
