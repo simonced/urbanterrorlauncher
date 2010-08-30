@@ -7,7 +7,7 @@ simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
 __author__="Simonced@gmail.com"
-__version__="0.7.6"
+__version__="0.7.7"
 
 #gui import - GTK
 import pygtk
@@ -53,8 +53,9 @@ class Utl:
 		self.players = {}	#empty dict, the key is the server address, then a list of players
 
 		#file object to manage the servers file
-		self.fdb = FileDB.FileManager(UTCFG.ServersFile)
-
+		self.servers_db = FileDB.FileManager(UTCFG.ServersFile)
+		self.buddies_db = FileDB.FileManager(UTCFG.BuddiesFile)
+		
 		#GUI creation starting here		
 		self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		#self.win.set_border_width(5)
@@ -96,7 +97,7 @@ class Utl:
 		# 8 raw name of the server without markup or colors to be sorted in the name column of the treeview
 		# 9 ping of the server
 		#display object (TreeView)
-		self.tree = gtk.TreeView(self.servers_list)
+		self.servers_tree = gtk.TreeView(self.servers_list)
 
 		#cell to render content
 		cell = gtk.CellRendererText()
@@ -110,12 +111,12 @@ class Utl:
 		column_map = gtk.TreeViewColumn('Map', cell, text=4, background=5)
 		
 		#adding the columns to the treeview
-		self.tree.append_column(column_name)
-		self.tree.append_column(column_address)
-		self.tree.append_column(column_type)
-		self.tree.append_column(column_players)
-		self.tree.append_column(column_ping)
-		self.tree.append_column(column_map)
+		self.servers_tree.append_column(column_name)
+		self.servers_tree.append_column(column_address)
+		self.servers_tree.append_column(column_type)
+		self.servers_tree.append_column(column_players)
+		self.servers_tree.append_column(column_ping)
+		self.servers_tree.append_column(column_map)
 
 		#attach to the columns
 		column_name.pack_start(cell, True)
@@ -138,7 +139,7 @@ class Utl:
 		column_address.set_sizing(gtk.TREE_VIEW_COLUMN_GROW_ONLY)
 		
 		#search ok 
-		self.tree.set_search_column(0)	#name search only
+		self.servers_tree.set_search_column(0)	#name search only
 		#sort ok
 		column_name.set_sort_column_id(8)	#using the raw name of the server for sorting
 		column_type.set_sort_column_id(2)
@@ -151,14 +152,14 @@ class Utl:
 		column_address.set_min_width(160)		#sizes to make it look better
 		
 		#signal on click of a line
-		self.tree.connect("cursor-changed", self.edit)
-		self.tree.connect("row-activated", self.play)
+		self.servers_tree.connect("cursor-changed", self.edit)
+		self.servers_tree.connect("row-activated", self.play)
 		
-		#we need a scroll pane for the tree!
-		scroll = gtk.ScrolledWindow()
-		scroll.add(self.tree)
-		#last step, adding the tree in the window (maybe adding a scroll window between)
-		server_tab.pack_start(scroll, True, True, PaddingDefault)
+		#we need a servers_scroll pane for the servers_tree!
+		servers_scroll = gtk.ScrolledWindow()
+		servers_scroll.add(self.servers_tree)
+		#last step, adding the servers_tree in the window (maybe adding a servers_scroll window between)
+		server_tab.pack_start(servers_scroll, True, True, PaddingDefault)
 
 
 		#then, few buttons that can act on the table rows
@@ -251,7 +252,7 @@ class Utl:
 		self.players_tree.append_column(column_player_score)
 		self.players_tree.append_column(column_player_ping)
 		#attach to the columns
-		column_player_name.pack_start(cell, True)	#we use the same cell model than in the previous tree above
+		column_player_name.pack_start(cell, True)	#we use the same cell model than in the previous servers_tree above
 		column_player_score.pack_start(cell, False)
 		column_player_ping.pack_start(cell, False)
 		#cell attributes
@@ -285,8 +286,39 @@ class Utl:
 		#==========================
 		# === Section 2 === Buddies
 		#==========================
-		buddies_tab = gtk.HBox()
+		buddies_tab = gtk.VBox()
 		notebook.append_page(buddies_tab, UTGUI.createBuddiesTabTitle() )
+		
+		self.buddies_list = gtk.ListStore( \
+			str, \
+			str,
+			str )
+		#model :
+		# buddy name
+		# server playing if connected
+		# map on the playing server
+		buddies_tree = gtk.TreeView(self.buddies_list)
+		buddies_scroll = gtk.ScrolledWindow()
+		buddies_scroll.add( buddies_tree )
+		#columns needed
+		buddy_name_col = gtk.TreeViewColumn('Name', cell, text=0)
+		buddy_server_name = gtk.TreeViewColumn('Server', cell, text=1)
+		buddy_server_map = gtk.TreeViewColumn('Map', cell, text=2)
+		#adding the columns to the treeview
+		buddies_tree.append_column(buddy_name_col)
+		buddies_tree.append_column(buddy_server_name)
+		buddies_tree.append_column(buddy_server_map)
+		#attach to the columns
+		buddy_name_col.pack_start(cell, True)	#we use the same cell model than in the previous servers_tree above
+		buddy_server_name.pack_start(cell, True)
+		buddy_server_map.pack_start(cell, True)
+		#cell attributes
+		buddy_name_col.add_attribute(cell, 'text', 0)
+		buddy_server_name.add_attribute(cell, 'text', 1)
+		buddy_server_map.add_attribute(cell, 'text', 2)
+		
+		#adding the tree to the view
+		buddies_tab.pack_start(buddies_scroll, True, True, PaddingDefault)
 		
 		
 		
@@ -310,7 +342,7 @@ class Utl:
 		gtk.main_quit()
 		
 		#then, the servers file
-		self.fdb.close()
+		self.servers_db.close()
 	
 	
 	#===
@@ -336,9 +368,9 @@ class Utl:
 	
 	
 	#===
-	#editing a line from the tree view (click)
+	#editing a line from the servers_tree view (click)
 	def edit(self, tree, path=None, column=None):
-		(model, iter) = self.tree.get_selection().get_selected()
+		(model, iter) = self.servers_tree.get_selection().get_selected()
 		if iter==None:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
 			return False
@@ -385,7 +417,7 @@ class Utl:
 		line = self.buildTxtLine(self.server_name.get_text(), self.server_address.get_text(), type_choisi)
 
 		#adding a new server
-		ok = self.fdb.addLine(line)
+		ok = self.servers_db.addLine(line)
 		
 		#we delete the previous line if needed, this delete call also refreshes the Tree model
 		if not self.delete(None):
@@ -396,9 +428,9 @@ class Utl:
 	
 	
 	#===
-	#deleting a line from the tree view
+	#deleting a line from the servers_tree view
 	def delete(self, tree_):
-		(model, iter) = self.tree.get_selection().get_selected()
+		(model, iter) = self.servers_tree.get_selection().get_selected()
 		if iter==None:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
 			return False
@@ -406,7 +438,7 @@ class Utl:
 		
 		try:
 			servers_file_line = model.get(iter, 7)[0]
-			self.fdb.delLine(servers_file_line)
+			self.servers_db.delLine(servers_file_line)
 			self.refresh()
 			return True
 			
@@ -419,7 +451,7 @@ class Utl:
 	#===
 	#deleting a line from the tree view
 	def play(self, tree, path=None, column=None):
-		(model, iter) = self.tree.get_selection().get_selected()
+		(model, iter) = self.servers_tree.get_selection().get_selected()
 		launch_cmd = [self.UrtExec,]
 		if iter!=None:
 			launch_cmd.append( "+connect" )
@@ -485,7 +517,7 @@ class Utl:
 				host_name = UTCOLORS.raw_string( host_name )
 				new_line = self.buildTxtLine(host_name, server, "AUTO")
 				#then, we append it to the list file and refresh, piece of cake
-				self.fdb.addLine(new_line)
+				self.servers_db.addLine(new_line)
 				
 				new_servers = new_servers + 1
 				

@@ -36,7 +36,7 @@ class ServersRefresh(Thread):
 	def run(self):
 		
 		#if server files not found, we skip the loading process
-		if not self.win.fdb:
+		if not self.win.servers_db:
 			return False
 
 		#we clean the list (already in memory, unlike widgets)
@@ -45,7 +45,7 @@ class ServersRefresh(Thread):
 		
 		#then we open the file and fill in the list			
 		loop = 0
-		lines = self.win.fdb.getAllLines()
+		lines = self.win.servers_db.getAllLines()
 		total_loops = len(lines)
 		for line in lines:
 			#to keep track of the line number

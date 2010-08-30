@@ -10,6 +10,7 @@ GameTypes = ('FFA', 'TDM', 'TS', 'CTF', 'BOMB', 'ICY')
 GameColors = {'FFA':'#FFFCCC', 'TDM':'#FFEBCC', 'TS':'#FFE7CC', 'CTF':'#FFCCFD', 'BOMB':'#FFCCCC', 'ICY':'#CCFEFF'}
 
 ServersFile = "UrbanTerror_launcher.txt"
+BuddiesFile = "UrbanTerror_buddies.txt"
 DEFAULT_PORT = 27960
 
 #the path to the exec file of the game, overrides the default setting bellow
