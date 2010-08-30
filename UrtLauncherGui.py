@@ -15,6 +15,8 @@ pygtk.require('2.0')
 import gtk
 import gobject
 
+import os
+
 
 def createBuddiesTabTitle():
 	
@@ -37,3 +39,26 @@ def createServersTabTitle():
 	buddies_tab_title.show_all()
 	
 	return buddies_tab_title
+
+
+#my own button to display an icon next to it even in pygtk 2.0
+class Button(gtk.Button):
+	
+	#My Button constructor
+	def __init__(self, label_, image_path_=None):
+		#parent constructor
+		super(Button, self).__init__()
+		
+		#container
+		cont = gtk.HBox()
+		
+		#image available?
+		if os.path.exists(image_path_):
+			cont.pack_start( gtk.image_new_from_file(image_path_), False, False, 0 )
+			
+		#Label
+		cont.pack_start( gtk.Label(label_), True, True, 5 )
+		
+		#We add everything in our button
+		self.add(cont)
+	

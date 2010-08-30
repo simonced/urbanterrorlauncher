@@ -163,20 +163,17 @@ class Utl:
 
 		#then, few buttons that can act on the table rows
 		row_treeBts = gtk.HBox()
-		self.del_bt = gtk.Button("Delete")
-		self.del_bt.set_image(gtk.image_new_from_file("rsc/delete_ico.png"))
+		self.del_bt = UTGUI.Button("Delete", "rsc/delete_ico.png")
 		self.del_bt.set_sensitive(False)	#disabled button
 		self.del_bt.connect("clicked", self.delete)
 		row_treeBts.pack_end(self.del_bt, False, False, PaddingDefault)
 		
 		
-		self.play_bt = gtk.Button("Play")
-		self.play_bt.set_image(gtk.image_new_from_file("rsc/play_ico.png"))
+		self.play_bt = UTGUI.Button("Play", "rsc/play_ico.png")
 		self.play_bt.connect("clicked", self.play)
 		row_treeBts.pack_end(self.play_bt, False, False, PaddingDefault)
 		
-		self.refresh_bt = gtk.Button("Refresh")
-		self.refresh_bt.set_image(gtk.image_new_from_file("rsc/refresh_ico.png"))
+		self.refresh_bt = UTGUI.Button("Refresh", "rsc/refresh_ico.png")
 		self.refresh_bt.connect("clicked", self.refresh)
 		row_treeBts.pack_end(self.refresh_bt, False, False, PaddingDefault)
 		
@@ -196,21 +193,24 @@ class Utl:
 		row2 = gtk.HBox()	
 		label_address = gtk.Label("Server Address")
 		label_address.set_alignment(0.9, 0.5)
+		label_address.set_size_request(100, 25)
 		row2.pack_start(label_address, False, False, PaddingDefault)
 		self.server_address = gtk.Entry()
-		row2.pack_start(self.server_address, True, True, PaddingDefault)
+		row2.pack_end(self.server_address, True, True, PaddingDefault)
 		bloc_down_left.pack_start(row2, False, False, PaddingDefault)
 		
 		row1 = gtk.HBox()
 		label_name = gtk.Label("Server Alias")
 		label_name.set_alignment(0.9, 0.5)	#lign right
+		label_name.set_size_request(100, 25)
 		row1.pack_start(label_name, False, False, PaddingDefault)
 		self.server_name = gtk.Entry()
-		row1.pack_start(self.server_name, True, True, PaddingDefault)
+		row1.pack_end(self.server_name, True, True, PaddingDefault)
 		bloc_down_left.pack_start(row1, False, False, PaddingDefault)		
 		
 		row3 = gtk.HBox()
 		label_types = gtk.Label("Game Type")
+		label_types.set_size_request(100, 25)
 		row3.pack_start(label_types, False, False, PaddingDefault)
 		#preparing the list
 		self.game_type = gtk.combo_box_new_text()
@@ -221,8 +221,7 @@ class Utl:
 		
 		
 		row_add = gtk.HBox()
-		bt_add = gtk.Button("Save")
-		bt_add.set_image(gtk.image_new_from_file("rsc/save_ico.png"))
+		bt_add = UTGUI.Button("Save", "rsc/save_ico.png")
 		bt_add.connect("clicked", self.add )
 		row_add.pack_end(bt_add, False, False, PaddingDefault)
 		bloc_down_left.pack_start(row_add, False, False, PaddingDefault)
