@@ -15,6 +15,7 @@ import UrtLauncherConfig as UTCFG
 #threading imports
 from threading import Thread
 import os
+import re
 
 import UrbanTerror_server_query as UTSQ
 import UrbanTerror_colors_tools as UTCT
@@ -26,7 +27,6 @@ class GlobalThread(Thread):
 	
 	def __init__(self):
 		super(GlobalThread, self).__init__()
-	
 	
 	
 	#===
@@ -79,6 +79,11 @@ class ServersRefresh(GlobalThread):
 			
 		
 		gobject.idle_add(self.updateStatusBar, "List updated : %i servers listed." % (loop,) )
+		
+		#refreshing the buddies
+		buddy_t = BuddiesRefresh(self.win)
+		buddy_t.start()
+		buddy_t.join()	#we wait for the buddy thread before exiting
 		
 		return True
 	
@@ -151,6 +156,7 @@ class BuddiesRefresh(GlobalThread):
 	
 	
 	def run(self):
+		
 		#if server files not found, we skip the loading process
 		if not self.win.buddies_db:
 			return False
@@ -167,14 +173,26 @@ class BuddiesRefresh(GlobalThread):
 			loop = loop + 1
 			
 			buddy_raw = line
-			server_raw = "TODO"
-			map_name = "TODO"
+			server_raw = "Server TODO"
+			map_name = "Map TODO"
 			bgcolor=UTCFG.DEFAULT_BG_COLOR
 			buddy_markup = UTCT.console_colors_to_markup(buddy_raw)
 			server_markup = UTCT.console_colors_to_markup(server_raw)
+			
+			#defaut offline picto
 			picto = gtk.gdk.pixbuf_new_from_file("rsc/buddy_off_ico.png")
-			data = (buddy_raw, server_raw, map_name, \
-				bgcolor, buddy_markup, server_markup, \
+			for server in self.win.players:
+				server_players_str = "/".join(self.win.players[server])
+				if re.search(re.escape(buddy_raw), server_players_str ):
+					picto = gtk.gdk.pixbuf_new_from_file("rsc/buddy_ico.png")
+					break
+				
+			data = (buddy_raw, \
+				server_raw, \
+				map_name, \
+				bgcolor, \
+				buddy_markup, \
+				server_markup, \
 				picto)
 			
 			#update of the model

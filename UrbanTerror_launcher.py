@@ -17,8 +17,6 @@ pygtk.require('2.0')
 import gtk
 import gobject
 
-#to escape some characters in players names
-import cgi
 #system and re imports
 import os, re
 import subprocess, shlex
@@ -52,10 +50,10 @@ class Utl:
 		
 		#loading the cfg file that repleaces some values if needed
 		self.loadCfg()
-
+		
 		#basic vars used in the GUI
 		self.players = {}	#empty dict, the key is the server address, then a list of players
-
+		
 		
 		#file object to manage the servers file
 		self.servers_db = FileDB.FileManager(UTCFG.ServersFile)
@@ -312,31 +310,29 @@ class Utl:
 		buddies_tree = gtk.TreeView(self.buddies_list)
 		buddies_scroll = gtk.ScrolledWindow()
 		buddies_scroll.add( buddies_tree )
+		
+		#new column with icon!
+		cell_buddy_status = gtk.CellRendererPixbuf()
+		
 		#columns needed
-		buddy_name_col = gtk.TreeViewColumn('Name')	#details for this columm done later
+		buddy_status_col = gtk.TreeViewColumn(None, cell_buddy_status, pixbuf=6)
+		buddy_name_col = gtk.TreeViewColumn('Name', cell, markup=4, background=3)
 		buddy_server_name = gtk.TreeViewColumn('Server', cell, markup=5, background=3)
 		buddy_server_map = gtk.TreeViewColumn('Map', cell, text=2, background=3)
 		# once columns are set, adding the columns to the treeview
+		buddies_tree.append_column(buddy_status_col)
 		buddies_tree.append_column(buddy_name_col)
 		buddies_tree.append_column(buddy_server_name)
 		buddies_tree.append_column(buddy_server_map)
 		#size props
+		buddy_status_col.set_min_width(32)
 		buddy_name_col.set_resizable(True)
 		buddy_name_col.set_min_width(200)
 		buddy_server_name.set_resizable(True)
 		buddy_server_name.set_min_width(200)
 		buddy_server_map.set_resizable(True)
 		buddy_server_map.set_min_width(200)
-		
-		#new column with icon!
-		cell_buddy_status = gtk.CellRendererPixbuf()
-		#using pack start now, allows to set each part of the column
-		buddy_name_col.pack_start(cell_buddy_status, False)
-		buddy_name_col.pack_start(cell, True)	#we use the same cell model than in the previous servers_tree above
-		#only then, specific cell attributes
-		buddy_name_col.add_attribute(cell_buddy_status, 'pixbuf', 6)	#the cell with picto is connected to the model containing the icon
-		buddy_name_col.add_attribute(cell, 'markup', 4)
-		buddy_name_col.add_attribute(cell, 'background', 3)
+
 		
 		#sorting options
 		buddy_name_col.set_sort_column_id(0)
@@ -393,13 +389,12 @@ class Utl:
 		t = UTTHREAD.ServersRefresh(self)
 		t.start()
 		
-		#Then, we update the buddies
-		self.refreshBuddies()
 		
 	
 	
 	#===
-	#allow to update the buddies list after adding a new buddy
+	# allow to update the buddies list after adding a new buddy
+	# Useless to call after serversRefresh() because the thread is still updating player list
 	def refreshBuddies(self, data=None):
 		
 		t = UTTHREAD.BuddiesRefresh(self)
@@ -427,12 +422,12 @@ class Utl:
 			for player in self.players[ address ]:
 				(score_full, name ) = player.split('"')[0:2]
 				(score, ping) = score_full.split(' ', 1)
-				name_color = UTCOLORS.console_colors_to_markup( cgi.escape(name) )
+				name_color = UTCOLORS.console_colors_to_markup( name )
 				model_players.append( \
 					(name, \
 					int(score.strip()), \
 					int(ping.strip()), \
-					'#FFFFFF', \
+					UTCFG.DEFAULT_BG_COLOR, \
 					name_color) \
 				)
 		

@@ -11,13 +11,14 @@ pygtk.require('2.0')
 import gtk
 import os
 import re
-
+import cgi
 
 #===
 # function to convert the console type colors into markup
 def console_colors_to_markup(console_txt_):
 	result = ""	#final result to be returned
-
+	
+	console_txt_ = cgi.escape(console_txt_)
 	parts = re.split("(\^\d.*?)", console_txt_)
 	
 	replace = False	#we only replace if we encountered a key
