@@ -157,6 +157,9 @@ class BuddiesRefresh(GlobalThread):
 	
 	def run(self):
 		
+		#we clean the buddi list in the window object
+		self.win.buddies = []	#same for buddies
+		
 		#if server files not found, we skip the loading process
 		if not self.win.buddies_db:
 			return False
@@ -180,11 +183,11 @@ class BuddiesRefresh(GlobalThread):
 			server_markup = UTCT.console_colors_to_markup(server_raw)
 			
 			#defaut offline picto
-			picto = gtk.gdk.pixbuf_new_from_file("rsc/buddy_off_ico.png")
+			picto = UTCFG.BUDDY_OFF_ICO
 			for server in self.win.players:
 				server_players_str = "/".join(self.win.players[server])
 				if re.search(re.escape(buddy_raw), server_players_str ):
-					picto = gtk.gdk.pixbuf_new_from_file("rsc/buddy_ico.png")
+					picto = UTCFG.BUDDY_ON_ICO
 					break
 				
 			data = (buddy_raw, \
@@ -201,6 +204,7 @@ class BuddiesRefresh(GlobalThread):
 				loop, \
 				total_loops)
 			
+			
 		#end of the list of buddies update process
 		gobject.idle_add(self.updateStatusBar, "List updated : %i buddies listed." % (loop,) )
 		
@@ -212,6 +216,10 @@ class BuddiesRefresh(GlobalThread):
 	#HAVE to return FALSE
 	#===
 	def updateList(self, list_, current_loop_, total_loops_):
+		#update of inner memory
+		self.win.buddies.append(list_[0])
+		
+		#update of gui elements
 		self.win.buddies_list.append( list_ )
 		self.win.statusBar.push(1, "Updating buddy status %s/%s..." % (current_loop_, total_loops_) )
 		return False 

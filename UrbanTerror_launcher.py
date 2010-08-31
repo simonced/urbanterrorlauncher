@@ -9,7 +9,7 @@ This is a tool to save your prefered servers you play often on.
 __author__="Simonced@gmail.com"
 __version__="0.7.7"
 
-DEBUG = True
+DEBUG = False
 
 #gui import - GTK
 import pygtk
@@ -28,9 +28,10 @@ import UrbanTerror_colors_tools as UTCOLORS
 import UrtLauncherGui as UTGUI
 import FileDB
 
-
+#this file tiny props
 Version = __version__
 PaddingDefault = 5
+
 #common configuration is here
 import UrtLauncherConfig as UTCFG
 
@@ -53,7 +54,7 @@ class Utl:
 		
 		#basic vars used in the GUI
 		self.players = {}	#empty dict, the key is the server address, then a list of players
-		
+		self.buddies = []
 		
 		#file object to manage the servers file
 		self.servers_db = FileDB.FileManager(UTCFG.ServersFile)
@@ -109,7 +110,9 @@ class Utl:
 
 		#cell to render content
 		cell = gtk.CellRendererText()
-
+		#cell to render buddy status
+		cell_buddy_status = gtk.CellRendererPixbuf()
+		
 		#column view
 		column_name = gtk.TreeViewColumn('Name', cell, markup=0, background=5)
 		column_address = gtk.TreeViewColumn('Address', cell, text=1, background=5)
@@ -233,19 +236,28 @@ class Utl:
 			int, \
 			int, \
 			str, \
-			str)
+			str,
+			gtk.gdk.Pixbuf)
+		
 		#model :
 		# 0 player name
 		# 1 player score
 		# 2 player ping
 		# 3 cell color. always white
 		# 4 player name markup
+		# 5 buddy status pixbuf
 		
 		self.players_tree = gtk.TreeView(players_list)
 		self.players_tree.connect("cursor-changed", self.playerSelected)
 		
 		#the columns for the view
-		column_player_name = gtk.TreeViewColumn('Name', cell, markup=4, background=3)
+		column_player_name = gtk.TreeViewColumn('Name')
+		column_player_name.pack_start(cell_buddy_status, True)
+		column_player_name.add_attribute(cell_buddy_status, "pixbuf", 5)
+		column_player_name.pack_start(cell, True)
+		column_player_name.add_attribute(cell, "markup", 4)
+		column_player_name.add_attribute(cell, "background", 3)
+		
 		column_player_score = gtk.TreeViewColumn('Score', cell, text=1, background=3)
 		column_player_ping = gtk.TreeViewColumn('Ping', cell, text=2, background=3)
 		#adding the columns to the treeview
@@ -310,9 +322,6 @@ class Utl:
 		buddies_tree = gtk.TreeView(self.buddies_list)
 		buddies_scroll = gtk.ScrolledWindow()
 		buddies_scroll.add( buddies_tree )
-		
-		#new column with icon!
-		cell_buddy_status = gtk.CellRendererPixbuf()
 		
 		#columns needed
 		buddy_status_col = gtk.TreeViewColumn(None, cell_buddy_status, pixbuf=6)
@@ -423,12 +432,18 @@ class Utl:
 				(score_full, name ) = player.split('"')[0:2]
 				(score, ping) = score_full.split(' ', 1)
 				name_color = UTCOLORS.console_colors_to_markup( name )
+				#picto for buddies
+				picto = None
+				if name in self.buddies:
+					picto = UTCFG.BUDDY_ON_ICO
+					
 				model_players.append( \
 					(name, \
 					int(score.strip()), \
 					int(ping.strip()), \
 					UTCFG.DEFAULT_BG_COLOR, \
-					name_color) \
+					name_color, \
+					picto) \
 				)
 		
 		#loop for game types
@@ -619,7 +634,7 @@ class Utl:
 		
 		(model, iter) = self.players_tree.get_selection().get_selected()
 		player_name = model.get(iter, 0)[0]	# column in model > part of the cell (only one in many cases)
-		
+		model[iter][5] = UTCFG.BUDDY_ICON
 		self.statusBar.push(1, "Adding %s in buddy-list" % (player_name, ) )
 		new_line = player_name + "\n"
 		self.buddies_db.addLine(new_line)
