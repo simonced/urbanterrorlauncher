@@ -19,22 +19,39 @@ import os
 import UrbanTerror_server_query as UTSQ
 import UrbanTerror_colors_tools as UTCT
 
+
+#================================
+#global thread function can be put here
+class GlobalThread(Thread):
+	
+	def __init__(self):
+		super(GlobalThread, self).__init__()
+	
+	
+	
+	#===
+	#Same for the last status bar message
+	#HAVE to return FALSE
+	#===
+	def updateStatusBar(self, msg_):
+		self.win.statusBar.push(1, msg_ )
+		return False
+
+
 #===
-#Attempt of threading the servers list refresh
+#Threading the servers list refresh
 #===
-class ServersRefresh(Thread):
+class ServersRefresh(GlobalThread):
 
 	def __init__(self, win_):
-		#@param win_ is the urt object with gui and other props
-		
 		super(ServersRefresh, self).__init__()
+		#@param win_ is the urt object with gui and other props
 		self.win = win_
 	
 	#===
 	#executing code of this thread
 	#===
 	def run(self):
-		
 		#if server files not found, we skip the loading process
 		if not self.win.servers_db:
 			return False
@@ -61,27 +78,19 @@ class ServersRefresh(Thread):
 				total_loops)
 			
 		
-		gobject.idle_add(self.updateStatusBar, "List updated, %i servers listed." % (loop,) )
+		gobject.idle_add(self.updateStatusBar, "List updated : %i servers listed." % (loop,) )
 		
 		return True
 	
 	
 	#===
-	#callback to update the listStore.
+	#callback to update the listStore of servers.
 	#HAVE to return FALSE
 	#===
 	def updateList(self, list_, current_loop_, total_loops_):
 		self.win.servers_list.append( list_ )
 		self.win.statusBar.push(1, "Query of server %s/%s..." % (current_loop_, total_loops_) )
 		return False 
-
-	#===
-	#Same for the last status bar message
-	#HAVE to return FALSE
-	#===
-	def updateStatusBar(self, msg_):
-		self.win.statusBar.push(1, msg_ )
-		return False
 	
 	
 	#===
@@ -110,11 +119,12 @@ class ServersRefresh(Thread):
 				players = "<b>" + players + "</b>"
 			mapname = utsq_cli.status['mapname']
 			servername = UTCT.console_colors_to_markup( utsq_cli.status['sv_hostname'] )
+			#plus, we need the ping time
+			ping = int( str(utsq_cli.ping*1000).split('.')[0][0:3] )
+			
 			#we save at the same time the list of players online for this address ;)
 			self.win.players[address] = utsq_cli.clients
 			raw_name = UTCT.raw_string( utsq_cli.status['sv_hostname'] )
-			#plus, we need the ping time
-			ping = int( str(utsq_cli.ping*1000).split('.')[0][0:3] )
 			
 		else:
 			#case we can't query the server
@@ -124,10 +134,66 @@ class ServersRefresh(Thread):
 			raw_name = UTCT.raw_string( conf_name )
 			ping = 999
 		
-		
-		
 		#closing the socket with the server
 		utsq_cli.close()
 		
 		return (servername, address, type, players, mapname, color, conf_name, loop_, raw_name, ping)
+
+
+#=====================================================
+# Thread that refreshes the buddies in the buddies tab
+class BuddiesRefresh(GlobalThread):
+
+	def __init__(self, win_):
+		super(BuddiesRefresh, self).__init__()
+		#@param win_ is the urt object with gui and other props
+		self.win = win_
 	
+	
+	def run(self):
+		#if server files not found, we skip the loading process
+		if not self.win.buddies_db:
+			return False
+
+		#we clean the list (already in memory, unlike widgets)
+		self.win.buddies_list.clear()
+		
+		#then we open the file and fill in the list			
+		loop = 0
+		lines = self.win.buddies_db.getAllLines()
+		total_loops = len(lines)
+		for line in lines:
+			#to keep track of the line number
+			loop = loop + 1
+			
+			buddy_raw = line
+			server_raw = "TODO"
+			map_name = "TODO"
+			bgcolor=UTCFG.DEFAULT_BG_COLOR
+			buddy_markup = UTCT.console_colors_to_markup(buddy_raw)
+			server_markup = UTCT.console_colors_to_markup(server_raw)
+			picto = gtk.gdk.pixbuf_new_from_file("rsc/buddy_off_ico.png")
+			data = (buddy_raw, server_raw, map_name, \
+				bgcolor, buddy_markup, server_markup, \
+				picto)
+			
+			#update of the model
+			gobject.idle_add(self.updateList, \
+				data, \
+				loop, \
+				total_loops)
+			
+		#end of the list of buddies update process
+		gobject.idle_add(self.updateStatusBar, "List updated : %i buddies listed." % (loop,) )
+		
+		return True
+	
+	
+	#===
+	#callback to update the listStore of buddies.
+	#HAVE to return FALSE
+	#===
+	def updateList(self, list_, current_loop_, total_loops_):
+		self.win.buddies_list.append( list_ )
+		self.win.statusBar.push(1, "Updating buddy status %s/%s..." % (current_loop_, total_loops_) )
+		return False 

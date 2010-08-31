@@ -9,19 +9,23 @@ This is a tool to save your prefered servers you play often on.
 __author__="Simonced@gmail.com"
 __version__="0.7.7"
 
+DEBUG = True
+
 #gui import - GTK
 import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
 
+#to escape some characters in players names
+import cgi
 #system and re imports
 import os, re
 import subprocess, shlex
 
 #sub tools - URT specific
 import UrbanTerror_server_query as UTSQ
-from UrtLauncherThreads import ServersRefresh
+import UrtLauncherThreads as UTTHREAD
 import UrbanTerror_colors_tools as UTCOLORS
 import UrtLauncherGui as UTGUI
 import FileDB
@@ -52,6 +56,7 @@ class Utl:
 		#basic vars used in the GUI
 		self.players = {}	#empty dict, the key is the server address, then a list of players
 
+		
 		#file object to manage the servers file
 		self.servers_db = FileDB.FileManager(UTCFG.ServersFile)
 		self.buddies_db = FileDB.FileManager(UTCFG.BuddiesFile)
@@ -62,10 +67,15 @@ class Utl:
 		self.win.connect("destroy", self.quit)
 		self.win.set_title("Urban Terror Launcher v"+Version)
 		self.win.set_size_request(770, 600)
+		win_layer = gtk.VBox()
+		self.win.add(win_layer)
 		
 		#creating tab container
 		notebook = gtk.Notebook()
-		self.win.add(notebook)
+		win_layer.pack_start(notebook, True, True, 0)
+		
+		self.statusBar = gtk.Statusbar()
+		win_layer.pack_start(self.statusBar, False, False, 0)
 		
 		#The first tab is for the servers
 		server_tab = gtk.VBox()
@@ -118,20 +128,6 @@ class Utl:
 		self.servers_tree.append_column(column_ping)
 		self.servers_tree.append_column(column_map)
 
-		#attach to the columns
-		column_name.pack_start(cell, True)
-		column_address.pack_start(cell, True)
-		column_type.pack_start(cell, False)
-		column_players.pack_start(cell, False)
-		column_ping.pack_start(cell, False)
-		column_map.pack_start(cell, False)
-		#text parameter on the column
-		column_name.add_attribute(cell, 'text', 0)
-		column_address.add_attribute(cell, 'text', 1)
-		column_type.add_attribute(cell, 'text', 2)
-		column_players.add_attribute(cell, 'text', 3)
-		column_ping.add_attribute(cell, 'text', 9)
-		column_map.add_attribute(cell, 'text', 4)
 		#columns ihm props
 		column_name.set_resizable(True)
 		column_name.set_sizing(gtk.TREE_VIEW_COLUMN_GROW_ONLY)
@@ -175,7 +171,7 @@ class Utl:
 		row_treeBts.pack_end(self.play_bt, False, False, PaddingDefault)
 		
 		self.refresh_bt = UTGUI.Button("Refresh", "rsc/refresh_ico.png")
-		self.refresh_bt.connect("clicked", self.refresh)
+		self.refresh_bt.connect("clicked", self.refreshServers)
 		row_treeBts.pack_end(self.refresh_bt, False, False, PaddingDefault)
 		
 		server_tab.pack_start(row_treeBts, False, False, PaddingDefault)
@@ -188,7 +184,6 @@ class Utl:
 		# == Section 2 - left part == Insertion of new data
 		bloc_down_left.pack_start(gtk.HSeparator(), False, False, PaddingDefault)
 		bloc_down_left.pack_start(gtk.Label("Server : "), False, False, PaddingDefault)
-		
 		
 		#Vertical Layer that contains the new entry form
 		row2 = gtk.HBox()	
@@ -228,37 +223,37 @@ class Utl:
 		row_add.pack_end(bt_add, False, False, PaddingDefault)
 		bloc_down_left.pack_start(row_add, False, False, PaddingDefault)
 		
+		#last pan that contains 2 blocks splited in half for server and players
 		bloc_down.pack_start(bloc_down_left, False, True, PaddingDefault)
 		
-		# == Section 2 - right part ==
-		players_model = gtk.ListStore(\
-			gobject.TYPE_STRING, \
-			gobject.TYPE_INT, \
-			gobject.TYPE_INT, \
-			gobject.TYPE_STRING)
-		#model :
-		# player name
-		# player score
-		# player ping
-		# cell color. always white
+		# === section 2 - right part - players ===
+		bloc_down_right = gtk.VBox()
 		
-		self.players_tree = gtk.TreeView(players_model)
+		# == Section 2 - right part ==
+		players_list = gtk.ListStore(\
+			str, \
+			int, \
+			int, \
+			str, \
+			str)
+		#model :
+		# 0 player name
+		# 1 player score
+		# 2 player ping
+		# 3 cell color. always white
+		# 4 player name markup
+		
+		self.players_tree = gtk.TreeView(players_list)
+		self.players_tree.connect("cursor-changed", self.playerSelected)
+		
 		#the columns for the view
-		column_player_name = gtk.TreeViewColumn('Name', cell, text=0, background=3)
+		column_player_name = gtk.TreeViewColumn('Name', cell, markup=4, background=3)
 		column_player_score = gtk.TreeViewColumn('Score', cell, text=1, background=3)
 		column_player_ping = gtk.TreeViewColumn('Ping', cell, text=2, background=3)
 		#adding the columns to the treeview
 		self.players_tree.append_column(column_player_name)
 		self.players_tree.append_column(column_player_score)
 		self.players_tree.append_column(column_player_ping)
-		#attach to the columns
-		column_player_name.pack_start(cell, True)	#we use the same cell model than in the previous servers_tree above
-		column_player_score.pack_start(cell, False)
-		column_player_ping.pack_start(cell, False)
-		#cell attributes
-		column_player_name.add_attribute(cell, 'text', 0)
-		column_player_score.add_attribute(cell, 'text', 1)
-		column_player_ping.add_attribute(cell, 'text', 2)
 		#columns ihm props
 		column_player_name.set_resizable(True)
 		column_player_name.set_min_width(200)
@@ -268,20 +263,29 @@ class Utl:
 		column_player_name.set_sort_column_id(0)
 		column_player_score.set_sort_column_id(1)
 		column_player_ping.set_sort_column_id(2)
-
+		column_player_name.clicked()	#default sort on this column
+		#scrolable list
 		players_scroll = gtk.ScrolledWindow()
+		players_scroll.set_size_request(250, 200)
 		players_scroll.add(self.players_tree)
-		bloc_down.pack_start(players_scroll, True, True, PaddingDefault)
+		bloc_down_right.pack_start(players_scroll, True, True, PaddingDefault)
+		#button to add a player as buddy
+		buddy_add_row = gtk.HBox()
+		self.buddy_add_bt = UTGUI.Button("Add player in buddy list", "rsc/buddy_add_ico.png")
+		self.buddy_add_bt.connect("clicked", self.buddyAdd)
+		self.buddy_add_bt.set_sensitive(False)
+		buddy_add_row.pack_end(self.buddy_add_bt, False, False, 0)
+		bloc_down_right.pack_start(buddy_add_row, False, False, 0)
 		
+		# === / section 2 - right part - players ===
+		bloc_down.pack_start(bloc_down_right, True, True, PaddingDefault)
 		
 		#adding the 2 blocs in the window
 		server_tab.pack_start(bloc_down, False, False, PaddingDefault)
 		
-		self.statusBar = gtk.Statusbar()
-		server_tab.pack_end(self.statusBar, False, False, PaddingDefault)
-		
 		#adding the server tab to the notebook
 		notebook.append_page(server_tab, UTGUI.createServersTabTitle() )
+		
 		
 		#==========================
 		# === Section 2 === Buddies
@@ -292,30 +296,53 @@ class Utl:
 		self.buddies_list = gtk.ListStore( \
 			str, \
 			str,
-			str )
+			str,
+			str,
+			str,
+			str,
+			gtk.gdk.Pixbuf)
 		#model :
-		# buddy name
-		# server playing if connected
-		# map on the playing server
+		# 0 buddy name
+		# 1 server playing if connected
+		# 2 map on the playing server
+		# 3 color of the row
+		# 4 buddy name markup
+		# 5 server name markup
+		# 6 icon status
 		buddies_tree = gtk.TreeView(self.buddies_list)
 		buddies_scroll = gtk.ScrolledWindow()
 		buddies_scroll.add( buddies_tree )
 		#columns needed
-		buddy_name_col = gtk.TreeViewColumn('Name', cell, text=0)
-		buddy_server_name = gtk.TreeViewColumn('Server', cell, text=1)
-		buddy_server_map = gtk.TreeViewColumn('Map', cell, text=2)
-		#adding the columns to the treeview
+		buddy_name_col = gtk.TreeViewColumn('Name')	#details for this columm done later
+		buddy_server_name = gtk.TreeViewColumn('Server', cell, markup=5, background=3)
+		buddy_server_map = gtk.TreeViewColumn('Map', cell, text=2, background=3)
+		# once columns are set, adding the columns to the treeview
 		buddies_tree.append_column(buddy_name_col)
 		buddies_tree.append_column(buddy_server_name)
 		buddies_tree.append_column(buddy_server_map)
-		#attach to the columns
+		#size props
+		buddy_name_col.set_resizable(True)
+		buddy_name_col.set_min_width(200)
+		buddy_server_name.set_resizable(True)
+		buddy_server_name.set_min_width(200)
+		buddy_server_map.set_resizable(True)
+		buddy_server_map.set_min_width(200)
+		
+		#new column with icon!
+		cell_buddy_status = gtk.CellRendererPixbuf()
+		#using pack start now, allows to set each part of the column
+		buddy_name_col.pack_start(cell_buddy_status, False)
 		buddy_name_col.pack_start(cell, True)	#we use the same cell model than in the previous servers_tree above
-		buddy_server_name.pack_start(cell, True)
-		buddy_server_map.pack_start(cell, True)
-		#cell attributes
-		buddy_name_col.add_attribute(cell, 'text', 0)
-		buddy_server_name.add_attribute(cell, 'text', 1)
-		buddy_server_map.add_attribute(cell, 'text', 2)
+		#only then, specific cell attributes
+		buddy_name_col.add_attribute(cell_buddy_status, 'pixbuf', 6)	#the cell with picto is connected to the model containing the icon
+		buddy_name_col.add_attribute(cell, 'markup', 4)
+		buddy_name_col.add_attribute(cell, 'background', 3)
+		
+		#sorting options
+		buddy_name_col.set_sort_column_id(0)
+		buddy_server_name.set_sort_column_id(1)
+		buddy_server_map.set_sort_column_id(2)
+		buddy_name_col.clicked()	#we activate the sorting by name by default
 		
 		#adding the tree to the view
 		buddies_tab.pack_start(buddies_scroll, True, True, PaddingDefault)
@@ -329,7 +356,7 @@ class Utl:
 		gtk.gdk.threads_enter()
 		
 		#init of the GUI with datas from servers
-		self.refresh()
+		self.refreshServers()
 		
 		gtk.main()
 		gtk.gdk.threads_leave()
@@ -343,7 +370,7 @@ class Utl:
 		
 		#then, the servers file
 		self.servers_db.close()
-	
+		self.buddies_db.close()
 	
 	#===
 	#simple init function for the input fields
@@ -352,18 +379,32 @@ class Utl:
 		self.server_name.set_text("")
 		self.game_type.set_active(-1)
 		self.del_bt.set_sensitive(False)
+		self.buddy_add_bt.set_sensitive(False)
 		
 		return True
 	
 	
 	#===
 	#the click on the refresh button
-	def refresh(self, data=None):
+	def refreshServers(self, data=None):
 		#clean-up of input fields
 		self.init()
 		
-		t = ServersRefresh(self)
+		t = UTTHREAD.ServersRefresh(self)
+		t.start()
+		
+		#Then, we update the buddies
+		self.refreshBuddies()
+		
+	
+	
+	#===
+	#allow to update the buddies list after adding a new buddy
+	def refreshBuddies(self, data=None):
+		
+		t = UTTHREAD.BuddiesRefresh(self)
 		ok = t.start()
+		
 		return ok
 	
 	
@@ -386,7 +427,14 @@ class Utl:
 			for player in self.players[ address ]:
 				(score_full, name ) = player.split('"')[0:2]
 				(score, ping) = score_full.split(' ', 1)
-				model_players.append( (name, int(score.strip()), int(ping.strip()), '#FFFFFF') )
+				name_color = UTCOLORS.console_colors_to_markup( cgi.escape(name) )
+				model_players.append( \
+					(name, \
+					int(score.strip()), \
+					int(ping.strip()), \
+					'#FFFFFF', \
+					name_color) \
+				)
 		
 		#loop for game types
 		loop = 0
@@ -421,8 +469,8 @@ class Utl:
 		
 		#we delete the previous line if needed, this delete call also refreshes the Tree model
 		if not self.delete(None):
-			#we still need to refresh
-			self.refresh()
+			#we still need to refreshServers
+			self.refreshServers()
 		
 		return ok
 	
@@ -439,7 +487,7 @@ class Utl:
 		try:
 			servers_file_line = model.get(iter, 7)[0]
 			self.servers_db.delLine(servers_file_line)
-			self.refresh()
+			self.refreshServers()
 			return True
 			
 		
@@ -516,14 +564,14 @@ class Utl:
 				#new line formating
 				host_name = UTCOLORS.raw_string( host_name )
 				new_line = self.buildTxtLine(host_name, server, "AUTO")
-				#then, we append it to the list file and refresh, piece of cake
+				#then, we append it to the list file and refreshServers, piece of cake
 				self.servers_db.addLine(new_line)
 				
 				new_servers = new_servers + 1
 				
-		#last step, refresh if needed
+		#last step, refreshServers if needed
 		if new_servers>0:
-			self.refresh()
+			self.refreshServers()
 		
 		return True
 
@@ -533,7 +581,7 @@ class Utl:
 	def buildTxtLine(self, name, address, type):
 		name = name.replace("|", "=")	#will do for instance
 		return name.strip() + "|" + address.strip() + "|" + type.strip() + "\n"
-		
+	
 	
 	#===
 	#Function to load the config and replace the default values
@@ -543,8 +591,10 @@ class Utl:
 			return False
 		#TODO create a default file that the user can change later
 		
+		count = 0
 		f = open(UTCFG.ConfigFile)
 		for line in f:
+			
 			#non data line, we skip
 			if "=" not in line:
 				continue
@@ -552,9 +602,34 @@ class Utl:
 			#replace the actual default value
 			if k=="UrtExec":
 				self.UrtExec=v.strip()
+				
 		f.close()
 		
 		return True
+	
+	
+	#===
+	#function that allows to add a player as buddy (activates the buddy add button)
+	def playerSelected(self, tree, path=None, column=None):
+		
+		if iter!=None:
+			self.buddy_add_bt.set_sensitive(True)
+		else:
+			self.buddy_add_bt.set_sensitive(False)
+	
+	
+	#===
+	#function to add a player in the buddy list
+	def buddyAdd(self, data_=None):
+		
+		(model, iter) = self.players_tree.get_selection().get_selected()
+		player_name = model.get(iter, 0)[0]	# column in model > part of the cell (only one in many cases)
+		
+		self.statusBar.push(1, "Adding %s in buddy-list" % (player_name, ) )
+		new_line = player_name + "\n"
+		self.buddies_db.addLine(new_line)
+		self.refreshBuddies()
+		
 
 
 #main loop
