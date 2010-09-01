@@ -409,7 +409,7 @@ class Utl:
 	# allow to update the buddies list after adding a new buddy
 	# Useless to call after serversRefresh() because the thread is still updating player list
 	def refreshBuddies(self, data=None):
-		
+		#because the player list is the same, the same player mustnt be added twice
 		t = UTTHREAD.BuddiesRefresh(self)
 		ok = t.start()
 		
@@ -582,10 +582,14 @@ class Utl:
 		model[iter][5] = UTCFG.BUDDY_ON_ICO
 		self.buddyAddLine(player_name)
 		self.refreshBuddies()
+		
+		#we disable the add button to prevent a double player add
+		self.buddy_add_bt.set_sensitive(False)
 	
 	
 	#===
 	#this function creates a new entry in the buddy list
+	#Can be called by a thread
 	def buddyAddLine(self, player_name):
 		self.statusBar.push(1, "Adding %s in buddy-list" % (player_name, ) )
 		new_line = player_name + "\n"
