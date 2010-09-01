@@ -171,7 +171,7 @@ class BuddiesRefresh(GlobalThread):
 			return False
 
 		#we clean the list (already in memory, unlike widgets)
-		self.win.buddies_list.clear()
+		self.win.buddies_tree.get_model().clear()
 		
 		#then we open the file and fill in the list			
 		loop = 0
@@ -187,9 +187,9 @@ class BuddiesRefresh(GlobalThread):
 			bgcolor=UTCFG.DEFAULT_BG_COLOR
 			buddy_markup = UTCT.console_colors_to_markup(buddy_raw)
 			server_markup = UTCT.console_colors_to_markup(server_raw)
+			picto = UTCFG.BUDDY_OFF_ICO #defaut offline picto
+			server_address = ""
 			
-			#defaut offline picto
-			picto = UTCFG.BUDDY_OFF_ICO
 			for server in self.win.players:
 				server_players_str = "/".join(self.win.players[server])
 				if re.search(re.escape(buddy_raw), server_players_str ):
@@ -201,6 +201,7 @@ class BuddiesRefresh(GlobalThread):
 					bgcolor = UTCFG.GameColors[ self.win.servers[server]['type'] ]
 					buddy_markup = "<b>%s</b>" % (buddy_markup, )
 					server_markup = UTCT.console_colors_to_markup(server_raw)
+					server_address = server
 					break
 				
 			
@@ -210,7 +211,8 @@ class BuddiesRefresh(GlobalThread):
 				bgcolor, \
 				buddy_markup, \
 				server_markup, \
-				picto)
+				picto,
+				server_address)
 			
 			#update of the model
 			gobject.idle_add(self.updateList, \
@@ -234,7 +236,7 @@ class BuddiesRefresh(GlobalThread):
 		self.win.buddies.append(list_[0])
 		
 		#update of gui elements
-		self.win.buddies_list.append( list_ )
+		self.win.buddies_tree.get_model().append( list_ )
 		self.win.statusBar.push(1, "Updating buddy status %s/%s..." % (current_loop_, total_loops_) )
 		return False
 	

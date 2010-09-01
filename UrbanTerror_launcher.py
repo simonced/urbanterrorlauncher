@@ -6,6 +6,7 @@ Simonced Urban Terror Launcher
 simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
+
 __author__="Simonced@gmail.com"
 __version__="0.7.7"
 
@@ -153,8 +154,8 @@ class Utl:
 		column_address.set_min_width(160)		#sizes to make it look better
 		
 		#signal on click of a line
-		self.servers_tree.connect("cursor-changed", self.edit)
-		self.servers_tree.connect("row-activated", self.play)
+		self.servers_tree.connect("cursor-changed", self.serverEdit)
+		self.servers_tree.connect("row-activated", self.serverPlay)
 		
 		#we need a servers_scroll pane for the servers_tree!
 		servers_scroll = gtk.ScrolledWindow()
@@ -167,12 +168,12 @@ class Utl:
 		row_treeBts = gtk.HBox()
 		self.del_bt = UTGUI.Button("Delete", "rsc/delete_ico.png")
 		self.del_bt.set_sensitive(False)	#disabled button
-		self.del_bt.connect("clicked", self.delete)
+		self.del_bt.connect("clicked", self.serverDelete)
 		row_treeBts.pack_end(self.del_bt, False, False, PaddingDefault)
 		
 		
 		self.play_bt = UTGUI.Button("Play", "rsc/play_ico.png")
-		self.play_bt.connect("clicked", self.play)
+		self.play_bt.connect("clicked", self.serverPlay)
 		row_treeBts.pack_end(self.play_bt, False, False, PaddingDefault)
 		
 		self.refresh_bt = UTGUI.Button("Refresh", "rsc/refresh_ico.png")
@@ -224,7 +225,7 @@ class Utl:
 		
 		row_add = gtk.HBox()
 		bt_add = UTGUI.Button("Save", "rsc/save_ico.png")
-		bt_add.connect("clicked", self.add )
+		bt_add.connect("clicked", self.serverAdd)
 		row_add.pack_end(bt_add, False, False, PaddingDefault)
 		bloc_down_left.pack_start(row_add, False, False, PaddingDefault)
 		
@@ -307,14 +308,15 @@ class Utl:
 		buddies_tab = gtk.VBox()
 		notebook.append_page(buddies_tab, UTGUI.createBuddiesTabTitle() )
 		
-		self.buddies_list = gtk.ListStore( \
+		buddies_list = gtk.ListStore( \
 			str, \
 			str,
 			str,
 			str,
 			str,
 			str,
-			gtk.gdk.Pixbuf)
+			gtk.gdk.Pixbuf,
+			str)
 		#model :
 		# 0 buddy name
 		# 1 server playing if connected
@@ -323,9 +325,13 @@ class Utl:
 		# 4 buddy name markup
 		# 5 server name markup
 		# 6 icon status
-		buddies_tree = gtk.TreeView(self.buddies_list)
+		# 7 server address
+		self.buddies_tree = gtk.TreeView(buddies_list )
+		self.buddies_tree.connect("cursor-changed", self.buddy_selected )
+		self.buddies_tree.connect("row-activated", self.buddyJoin )
+		
 		buddies_scroll = gtk.ScrolledWindow()
-		buddies_scroll.add( buddies_tree )
+		buddies_scroll.add( self.buddies_tree )
 		
 		#columns needed
 		buddy_status_col = gtk.TreeViewColumn(None, cell_buddy_status, pixbuf=6)
@@ -333,10 +339,10 @@ class Utl:
 		buddy_server_name = gtk.TreeViewColumn('Server', cell, markup=5, background=3)
 		buddy_server_map = gtk.TreeViewColumn('Map', cell, text=2, background=3)
 		# once columns are set, adding the columns to the treeview
-		buddies_tree.append_column(buddy_status_col)
-		buddies_tree.append_column(buddy_name_col)
-		buddies_tree.append_column(buddy_server_name)
-		buddies_tree.append_column(buddy_server_map)
+		self.buddies_tree.append_column(buddy_status_col)
+		self.buddies_tree.append_column(buddy_name_col)
+		self.buddies_tree.append_column(buddy_server_name)
+		self.buddies_tree.append_column(buddy_server_map)
 		#size props
 		buddy_status_col.set_min_width(32)
 		buddy_name_col.set_resizable(True)
@@ -345,7 +351,6 @@ class Utl:
 		buddy_server_name.set_min_width(200)
 		buddy_server_map.set_resizable(True)
 		buddy_server_map.set_min_width(200)
-
 		
 		#sorting options
 		buddy_name_col.set_sort_column_id(0)
@@ -356,6 +361,15 @@ class Utl:
 		#adding the tree to the view
 		buddies_tab.pack_start(buddies_scroll, True, True, PaddingDefault)
 		
+		#then a row of buttons to control the action in the buddy list
+		buddy_row = gtk.HBox()
+		buddies_tab.pack_start(buddy_row, False, False, PaddingDefault)
+		
+		self.buddy_join_bt = UTGUI.Button("Join", "rsc/play_ico.png")
+		self.buddy_join_bt.connect("clicked", self.buddyJoin )
+		buddy_row.pack_end(self.buddy_join_bt, False, False, PaddingDefault)
+		
+		#TODO : delete a buddy
 		
 		
 		#la fenetre
@@ -389,6 +403,7 @@ class Utl:
 		self.game_type.set_active(-1)
 		self.del_bt.set_sensitive(False)
 		self.buddy_add_bt.set_sensitive(False)
+		self.buddy_join_bt.set_sensitive(False)
 		
 		return True
 	
@@ -409,16 +424,16 @@ class Utl:
 	# allow to update the buddies list after adding a new buddy
 	# Useless to call after serversRefresh() because the thread is still updating player list
 	def refreshBuddies(self, data=None):
-		#because the player list is the same, the same player mustnt be added twice
+		#clean-up of input fields
+		self.init()
+		
 		t = UTTHREAD.BuddiesRefresh(self)
 		ok = t.start()
-		
-		return ok
 	
 	
 	#===
 	#editing a line from the servers_tree view (click)
-	def edit(self, tree, path=None, column=None):
+	def serverEdit(self, tree, path=None, column=None):
 		(model, iter) = self.servers_tree.get_selection().get_selected()
 		if iter==None:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
@@ -468,7 +483,7 @@ class Utl:
 		
 	#===
 	#function to insert the new server in our list
-	def add(self, data_=None):
+	def serverAdd(self, data_=None):
 		
 		#input data - game type
 		type_choisi=""
@@ -491,7 +506,7 @@ class Utl:
 	
 	#===
 	#deleting a line from the servers_tree view
-	def delete(self, tree_):
+	def serverDelete(self, tree_):
 		(model, iter) = self.servers_tree.get_selection().get_selected()
 		if iter==None:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
@@ -512,19 +527,29 @@ class Utl:
 
 	#===
 	#deleting a line from the tree view
-	def play(self, tree, path=None, column=None):
-		(model, iter) = self.servers_tree.get_selection().get_selected()
-		launch_cmd = [self.UrtExec,]
-		if iter!=None:
-			launch_cmd.append( "+connect" )
-			launch_cmd.append( model.get(iter, 1)[0] )
-		
+	def serverPlay(self, tree=None, path=None, column=None, server_addr_=None):
 		#we dont allow a new game launch
 		if(self.game_running):
 			return
 		
+		#will contain the list of arguments to launch the game
+		launch_cmd = [self.UrtExec,]
+		
+		#This method can be used from other calls (objects)
+		#This is the way to specify a server address manually
+		if server_addr_ :
+			launch_cmd.append( "+connect" )
+			launch_cmd.append( server_addr_ )
+		
+		else:
+			(model, iter) = self.servers_tree.get_selection().get_selected()
+			
+			if iter!=None:
+				launch_cmd.append( "+connect" )
+				launch_cmd.append( model.get(iter, 1)[0] )
+		
 		# === LAUNCHING THE GAME ===
-		exec_path = os.path.dirname(self.UrtExec)
+		exec_path = os.path.dirname(self.UrtExec)	#let's keep aside the path of the game to launch it
 		play_t = UTTHREAD.ServerPlay(self, launch_cmd, exec_path)
 		play_t.start()	#launching the thread
 		
@@ -596,7 +621,31 @@ class Utl:
 		ok = self.buddies_db.addLine(new_line)
 		
 		return ok
-
+	
+	
+	#===
+	# a line is selected in the list
+	def buddy_selected(self, tree, path=None, column=None):
+		
+		(model, iter) = self.buddies_tree.get_selection().get_selected()
+		server_address = model.get(iter, 7)[0]
+		if server_address:
+			self.buddy_join_bt.set_sensitive(True)
+		else:
+			self.buddy_join_bt.set_sensitive(False)
+		
+	
+	#===
+	#function to add a player in the buddy list
+	def buddyJoin(self, tree=None, path=None, column=None):
+		
+		(model, iter) = self.buddies_tree.get_selection().get_selected()
+		server_address = model.get(iter, 7)[0]
+		
+		if server_address:
+			self.serverPlay(server_addr_=server_address)
+	
+	
 
 #main loop
 #=========
