@@ -497,7 +497,7 @@ class Utl:
 		ok = self.servers_db.addLine(line)
 		
 		#we delete the previous line if needed, this delete call also refreshes the Tree model
-		if not self.delete(None):
+		if not self.serverDelete(None):
 			#we still need to refreshServers
 			self.refreshServers()
 		
