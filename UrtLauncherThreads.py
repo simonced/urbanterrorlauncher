@@ -57,7 +57,8 @@ class ServersRefresh(GlobalThread):
 			return False
 
 		#we clean the list (already in memory, unlike widgets)
-		self.win.servers_list.clear()
+		self.win.servers_tree.get_model().clear()
+		self.win.players_tree.get_model().clear()
 		self.win.players = {}	#empty the players list
 		
 		#then we open the file and fill in the list			
@@ -93,7 +94,7 @@ class ServersRefresh(GlobalThread):
 	#HAVE to return FALSE
 	#===
 	def updateList(self, list_, current_loop_, total_loops_):
-		self.win.servers_list.append( list_ )
+		self.win.servers_tree.get_model().append( list_ )
 		self.win.statusBar.push(1, "Query of server %s/%s..." % (current_loop_, total_loops_) )
 		return False 
 	
@@ -129,6 +130,10 @@ class ServersRefresh(GlobalThread):
 			
 			#we save at the same time the list of players online for this address ;)
 			self.win.players[address] = utsq_cli.clients
+			#and the server status in the list linked by address
+			self.win.servers[address] = {"name":utsq_cli.status['sv_hostname'], \
+				"map":utsq_cli.status['mapname'], \
+				"type":type}
 			raw_name = UTCT.raw_string( utsq_cli.status['sv_hostname'] )
 			
 		else:
@@ -176,8 +181,8 @@ class BuddiesRefresh(GlobalThread):
 			loop = loop + 1
 			
 			buddy_raw = line
-			server_raw = "Server TODO"
-			map_name = "Map TODO"
+			server_raw = "OFFLINE"
+			map_name = "OFFLINE"
 			bgcolor=UTCFG.DEFAULT_BG_COLOR
 			buddy_markup = UTCT.console_colors_to_markup(buddy_raw)
 			server_markup = UTCT.console_colors_to_markup(server_raw)
@@ -188,8 +193,16 @@ class BuddiesRefresh(GlobalThread):
 				server_players_str = "/".join(self.win.players[server])
 				if re.search(re.escape(buddy_raw), server_players_str ):
 					picto = UTCFG.BUDDY_ON_ICO
+					
+					#adapting the already prepared data to match the online status
+					server_raw = self.win.servers[server]['name']
+					map_name = self.win.servers[server]['map']
+					bgcolor = UTCFG.GameColors[ self.win.servers[server]['type'] ]
+					buddy_markup = "<b>%s</b>" % (buddy_markup, )
+					server_markup = UTCT.console_colors_to_markup(server_raw)
 					break
 				
+			
 			data = (buddy_raw, \
 				server_raw, \
 				map_name, \

@@ -55,6 +55,8 @@ class Utl:
 		#basic vars used in the GUI
 		self.players = {}	#empty dict, the key is the server address, then a list of players
 		self.buddies = []
+		self.servers = {}	
+		#sample {"127.0.0.1":{"name":"Local server", "map":"ut4_icy5b", "type":"FFA"}}
 		
 		#file object to manage the servers file
 		self.servers_db = FileDB.FileManager(UTCFG.ServersFile)
@@ -82,7 +84,7 @@ class Utl:
 		# == Section1 == Listing and launching a server
 		
 		#model for the view (ListStore)
-		self.servers_list = gtk.ListStore(\
+		servers_list = gtk.ListStore(\
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
 			gobject.TYPE_STRING, \
@@ -106,7 +108,7 @@ class Utl:
 		# 8 raw name of the server without markup or colors to be sorted in the name column of the treeview
 		# 9 ping of the server
 		#display object (TreeView)
-		self.servers_tree = gtk.TreeView(self.servers_list)
+		self.servers_tree = gtk.TreeView(servers_list)
 
 		#cell to render content
 		cell = gtk.CellRendererText()
@@ -557,7 +559,7 @@ class Utl:
 			
 			#we need to check in the model (for each line) if this server address already exists
 			already = False
-			for line in self.servers_list:
+			for line in model:
 				current = line[1]
 				#let's be sure we have the full address
 				if ":" not in current:
@@ -621,8 +623,10 @@ class Utl:
 	#===
 	#function that allows to add a player as buddy (activates the buddy add button)
 	def playerSelected(self, tree, path=None, column=None):
-		
-		if iter!=None:
+		(model, iter) = self.players_tree.get_selection().get_selected()
+		player_name = model.get(iter, 0)[0] # column in model > part of the cell (only one in many cases)
+
+		if iter!=None and player_name not in self.buddies:
 			self.buddy_add_bt.set_sensitive(True)
 		else:
 			self.buddy_add_bt.set_sensitive(False)
@@ -634,7 +638,7 @@ class Utl:
 		
 		(model, iter) = self.players_tree.get_selection().get_selected()
 		player_name = model.get(iter, 0)[0]	# column in model > part of the cell (only one in many cases)
-		model[iter][5] = UTCFG.BUDDY_ICON
+		model[iter][5] = UTCFG.BUDDY_ON_ICO
 		self.statusBar.push(1, "Adding %s in buddy-list" % (player_name, ) )
 		new_line = player_name + "\n"
 		self.buddies_db.addLine(new_line)
