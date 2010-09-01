@@ -19,7 +19,7 @@ import gobject
 
 #system and re imports
 import os, re
-import subprocess, shlex
+import shlex
 
 #sub tools - URT specific
 import UrbanTerror_server_query as UTSQ
@@ -62,7 +62,9 @@ class Utl:
 		self.servers_db = FileDB.FileManager(UTCFG.ServersFile)
 		self.buddies_db = FileDB.FileManager(UTCFG.BuddiesFile)
 		
-		#GUI creation starting here		
+		self.game_running = False
+		
+		# === GUI creation starting here ===
 		self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		#self.win.set_border_width(5)
 		self.win.connect("destroy", self.quit)
@@ -517,76 +519,15 @@ class Utl:
 			launch_cmd.append( "+connect" )
 			launch_cmd.append( model.get(iter, 1)[0] )
 		
+		#we dont allow a new game launch
+		if(self.game_running):
+			return
+		
 		# === LAUNCHING THE GAME ===
-		print "launching game with command : " + " ".join(launch_cmd)
-		logs = open("logs.txt", "w")
 		exec_path = os.path.dirname(self.UrtExec)
-		subprocess.call(launch_cmd, cwd=exec_path, stderr=logs)	#blocking call for log output
-		logs.close()
+		play_t = UTTHREAD.ServerPlay(self, launch_cmd, exec_path)
+		play_t.start()	#launching the thread
 		
-		# === ANALYSIS OF LOGS ===
-		logs = open("logs.txt")
-		server_connected = []
-		#todo : analyse the logs
-		for line in logs:
-			res = re.search("resolved to (\d+\.\d+\.\d+\.\d+)",line)
-			if res:
-				server_connected.append(res.groups(1)[0])
-		logs.close()
-		#no need of logs anymore
-		os.remove("logs.txt")
-		
-		#we count the new entries
-		new_servers = 0
-		
-		#analysis of the played server(s)
-		for server in set(server_connected):
-			if ':' in server:
-				(serv_addr, serv_port) = server.strip().split(':', 1)
-			else:
-				serv_addr = server
-				serv_port = UTCFG.DEFAULT_PORT
-				server += ":"+str(UTCFG.DEFAULT_PORT)	#simple change for insertion few lines under
-				#only in case the port is not specified, unlikely should not happen
-
-			conn = UTSQ.Utsq(serv_addr, int(serv_port) )
-			if conn.request:
-				host_name = conn.status['sv_hostname']
-			else :
-				host_name = "HOST WAS UNREACHABLE AT QUERY TIME"
-			conn.close()
-			
-			
-			#we need to check in the model (for each line) if this server address already exists
-			already = False
-			for line in model:
-				current = line[1]
-				#let's be sure we have the full address
-				if ":" not in current:
-					current = current + ":" + str(UTCFG.DEFAULT_PORT)
-					
-				#then we can check
-				if current == server:
-					#one server at least corresponds, we can skip then
-					already = True
-					break
-			
-			#new server? we add it
-			if not already:
-				#new line formating
-				host_name = UTCOLORS.raw_string( host_name )
-				new_line = self.buildTxtLine(host_name, server, "AUTO")
-				#then, we append it to the list file and refreshServers, piece of cake
-				self.servers_db.addLine(new_line)
-				
-				new_servers = new_servers + 1
-				
-		#last step, refreshServers if needed
-		if new_servers>0:
-			self.refreshServers()
-		
-		return True
-
 
 	#===
 	#Function that creates a line to be inserted into the file	
@@ -639,11 +580,18 @@ class Utl:
 		(model, iter) = self.players_tree.get_selection().get_selected()
 		player_name = model.get(iter, 0)[0]	# column in model > part of the cell (only one in many cases)
 		model[iter][5] = UTCFG.BUDDY_ON_ICO
+		self.buddyAddLine(player_name)
+		self.refreshBuddies()
+	
+	
+	#===
+	#this function creates a new entry in the buddy list
+	def buddyAddLine(self, player_name):
 		self.statusBar.push(1, "Adding %s in buddy-list" % (player_name, ) )
 		new_line = player_name + "\n"
-		self.buddies_db.addLine(new_line)
-		self.refreshBuddies()
+		ok = self.buddies_db.addLine(new_line)
 		
+		return ok
 
 
 #main loop

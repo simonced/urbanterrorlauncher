@@ -14,6 +14,7 @@ import UrtLauncherConfig as UTCFG
 
 #threading imports
 from threading import Thread
+import subprocess
 import os
 import re
 
@@ -235,4 +236,116 @@ class BuddiesRefresh(GlobalThread):
 		#update of gui elements
 		self.win.buddies_list.append( list_ )
 		self.win.statusBar.push(1, "Updating buddy status %s/%s..." % (current_loop_, total_loops_) )
-		return False 
+		return False
+	
+	
+#===
+#Threading the servers list refresh
+#===
+class ServerPlay(GlobalThread):
+
+	def __init__(self, win_, launch_cmd, cwd):
+		super(ServerPlay, self).__init__()
+		#@param win_ is the urt object with gui and other props
+		self.win = win_
+		self.launch_cmd = launch_cmd
+		self.cwd = cwd
+		
+	
+	def run(self):
+		
+		# -- running part --
+		self.win.game_running = True
+		self.updateStatusBar("Game running...")
+		print "Game command : " + " ".join(self.launch_cmd)
+		
+		logs = open("logs.txt", "w")
+		subprocess.call(self.launch_cmd, cwd=self.cwd, stderr=logs)	#blocking call for log output
+		logs.close()
+		# -- / running part --
+		
+		# --- win object that are used in the following part ---
+		servers_model = self.win.servers_tree.get_model()
+		# --- / ---
+		
+		# --- analysis of logs ---
+		logs = open("logs.txt")
+		server_connected = []
+		for line in logs:
+			
+			#new server played?
+			res = re.search("resolved to (\d+\.\d+\.\d+\.\d+)",line)
+			if res:
+				server_connected.append(res.groups(1)[0])
+			
+			#other things to analyse later
+			#TODO
+			
+		#closing and removing logs
+		logs.close()
+		os.remove("logs.txt")
+		# -- / analysis of logs --
+		
+		# -- Servers analysis part --
+		#we count the new entries
+		new_servers = 0
+		
+		#analysis of the played server(s)
+		for server in set(server_connected):
+			if ':' in server:
+				(serv_addr, serv_port) = server.strip().split(':', 1)
+			else:
+				serv_addr = server
+				serv_port = UTCFG.DEFAULT_PORT
+				server += ":"+str(UTCFG.DEFAULT_PORT)	#simple change for insertion few lines under
+				#only in case the port is not specified, unlikely should not happen
+
+			conn = UTSQ.Utsq(serv_addr, int(serv_port) )
+			if conn.request:
+				host_name = conn.status['sv_hostname']
+			else :
+				host_name = "HOST WAS UNREACHABLE AT QUERY TIME"
+			conn.close()
+			
+			
+			#we need to check in the model (for each line) if this server address already exists
+			already = False
+			for line in servers_model:
+				current = line[1]
+				#let's be sure we have the full address
+				if ":" not in current:
+					current = current + ":" + str(UTCFG.DEFAULT_PORT)
+					
+				#then we can check
+				if current == server:
+					#one server at least corresponds, we can skip then
+					already = True
+					break
+			
+			#new server? we add it
+			if not already:
+				#new line formating
+				host_name = UTCOLORS.raw_string( host_name )
+				new_line = self.win.buildTxtLine(host_name, server, "AUTO")
+				#then, we append it to the list file and refreshServers, piece of cake
+				self.win.servers_db.addLine(new_line)
+				
+				new_servers = new_servers + 1
+				
+		#last step, refreshServers if needed
+		if new_servers>0:
+			gobject.idle_add(self.refreshServers)
+		#--- / servers analysis part ---
+		
+		
+		
+		#we unlock the launch command
+		self.win.game_running = False
+		self.updateStatusBar("Game closed")
+		
+	
+	#===
+	#called from thread, refreshes the server list
+	def serversRefresh(self):
+		 self.win.refreshServers()
+		 return False
