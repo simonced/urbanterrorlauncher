@@ -32,6 +32,9 @@ def console_colors_to_markup(console_txt_):
 		color_found = re.match("\^(\d)$", part)
 		if color_found:
 			replace = int( color_found.groups()[0] )
+			#to be sure that some names don't try unknown colors that would be out of range for us
+			if replace>len(URT_COLORS)-1:
+				replace = 0
 		else:
 			result += part
 			replace = False
