@@ -27,6 +27,11 @@ class FileManager:
 		self.file_write = None
 		#TODO adding format features like separators and so on
 		
+		#creation of a default file
+		if not os.path.exists(self.name):
+			f = open('w')
+			f.close()
+	
 	
 	#===
 	#close the opened pointers if needed

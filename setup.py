@@ -11,7 +11,7 @@ import glob
 opts = {
 	"py2exe": {
 		"packages" : "encodings",
-		"includes": ["pango", "atk", "gobject", "gtk", "cairo"]
+		"includes": ["atk", "gobject", "gtk", "cairo", "pango", "pangocairo"]
 	}
 }
 
@@ -23,6 +23,7 @@ setup(
 	options = opts,
 	data_files=[
 		'UrbanTerror_launcher.txt',
+		'UrbanTerror_buddies.txt',
 		'UrbanTerror_launcher.cfg',
 		'credits.txt',
 		("rsc", glob.glob("rsc/*.png"))
