@@ -6,7 +6,7 @@ simonced@gmail.com
 This is a tool to be used by UrbanTerrorLauncher.
 '''
 
-import gtk
+#import gtk
 import gobject
 
 #common configuration is here
@@ -222,6 +222,7 @@ class BuddiesRefresh(GlobalThread):
 			server_markup = UTCT.console_colors_to_markup(server_raw)
 			picto = UTCFG.BUDDY_OFF_ICO #defaut offline picto
 			server_address = ""
+			buddy_line = loop
 			
 			#control of this buddy with all players connected in the servers list
 			for server in self.win.players:
@@ -241,29 +242,25 @@ class BuddiesRefresh(GlobalThread):
 					server_address = server
 					#--- / buddy list update ---
 					
-					
-					#--- server players column picto update ---
-					gobject.idle_add(self.severs_buddy_update_idle, server_address )
-					#--- / server players column picto update ---
-					
 					break
 				
 			
-			data = (buddy_raw, \
-				server_raw, \
-				map_name, \
-				bgcolor, \
-				buddy_markup, \
-				server_markup, \
+			data = (buddy_raw,
+				server_raw,
+				map_name,
+				bgcolor,
+				buddy_markup,
+				server_markup,
 				picto,
-				server_address)
+				server_address,
+				buddy_line)
 			
-			#update of the model
-			gobject.idle_add(self.updateList, \
-				data, \
-				loop, \
+			#update of the model and inner list
+			gobject.idle_add(self.updateList,
+				data,
+				loop,
 				total_loops)
-			
+
 			
 		#end of the list of buddies update process
 		gobject.idle_add(self.updateStatusBar, "Buddies list updated : %i buddies" % (loop,) )
@@ -283,23 +280,6 @@ class BuddiesRefresh(GlobalThread):
 		self.win.buddies_tree.get_model().append( list_ )
 		self.win.statusBar.push(1, "Updating buddy status %s/%s..." % (current_loop_, total_loops_) )
 		return False
-	
-	
-	#===
-	#idle call to update the buddy icon in the server list if a buddy is connected
-	#HAVE TO RETURN FALSE
-	def severs_buddy_update_idle(self, server_address_):
-		self.win.servers_tree.get_model().foreach(self.severs_buddy_update, server_address_)
-		
-		return False
-	
-	
-	#===
-	#check and update of one line of the servers in the model
-	def severs_buddy_update(self, model_, path_, iter_, server_address_):
-		if model_.get_value(iter_, 1) == server_address_:
-			model_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
-	
 	
 	
 #===

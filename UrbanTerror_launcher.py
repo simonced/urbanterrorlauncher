@@ -189,7 +189,7 @@ class Utl:
 		row_treeBts.pack_end(self.play_bt, False, False, PaddingDefault)
 		
 		self.refresh_bt = UTGUI.Button("Refresh", "rsc/refresh_ico.png")
-		self.refresh_bt.connect("clicked", self.refreshServers)
+		self.refresh_bt.connect("clicked", self.serversRefresh)
 		row_treeBts.pack_end(self.refresh_bt, False, False, PaddingDefault)
 		
 		#simple label that indicates how many server displayed
@@ -324,15 +324,16 @@ class Utl:
 		buddies_tab = gtk.VBox()
 		notebook.append_page(buddies_tab, UTGUI.createBuddiesTabTitle() )
 		
-		buddies_list = gtk.ListStore( \
-			str, \
+		buddies_list = gtk.ListStore(
+			str,
 			str,
 			str,
 			str,
 			str,
 			str,
 			gtk.gdk.Pixbuf,
-			str)
+			str,
+			int)
 		#model :
 		# 0 buddy name
 		# 1 server playing if connected
@@ -342,10 +343,13 @@ class Utl:
 		# 5 server name markup
 		# 6 icon status
 		# 7 server address
+		# 8 buddy line in the db file
+		
 		self.buddies_tree = gtk.TreeView(buddies_list )
 		self.buddies_tree.connect("cursor-changed", self.buddySelected )
 		self.buddies_tree.connect("row-activated", self.buddyJoin )
-		
+		self.buddies_tree.connect("key-press-event", self.buddyDeleteKey )
+
 		buddies_scroll = gtk.ScrolledWindow()
 		buddies_scroll.add( self.buddies_tree )
 		
@@ -399,7 +403,7 @@ class Utl:
 		gtk.gdk.threads_enter()
 		
 		#init of the GUI with datas from servers
-		self.refreshServers()
+		self.serversRefresh()
 		
 		gtk.main()
 		gtk.gdk.threads_leave()
@@ -431,7 +435,7 @@ class Utl:
 	
 	#===
 	#the click on the refresh button
-	def refreshServers(self, data=None):
+	def serversRefresh(self, data=None):
 		#clean-up of input fields
 		self.init()
 		
@@ -439,17 +443,13 @@ class Utl:
 		t.start()
 		
 		
-	
-	
 	#===
 	# allow to update the buddies list after adding a new buddy
 	# Useless to call after serversRefresh() because the thread is still updating player list
-	def refreshBuddies(self, data=None):
-		#clean-up of input fields
-		self.init()
-		
+	def buddiesRefresh(self, data=None):
+
 		t = UTTHREAD.BuddiesRefresh(self)
-		ok = t.start()
+		t.start()
 	
 	
 	#===
@@ -520,8 +520,8 @@ class Utl:
 		
 		#we delete the previous line if needed, this delete call also refreshes the Tree model
 		if not self.serverDelete(None):
-			#we still need to refreshServers
-			self.refreshServers()
+			#we still need to serversRefresh
+			self.serversRefresh()
 		
 		return ok
 	
@@ -539,7 +539,7 @@ class Utl:
 		try:
 			servers_file_line = model.get(iter, 7)[0]
 			self.servers_db.delLine(servers_file_line)
-			self.refreshServers()
+			self.serversRefresh()
 			return True
 			
 		
@@ -602,7 +602,6 @@ class Utl:
 			return False
 		#TODO create a default file that the user can change later
 		
-		count = 0
 		f = open(UTCFG.ConfigFile)
 		for line in f:
 			
@@ -639,11 +638,11 @@ class Utl:
 		player_name = model.get(iter, 0)[0]	# column in model > part of the cell (only one in many cases)
 		model[iter][5] = UTCFG.BUDDY_ON_ICO
 		self.buddyAddLine(player_name)
-		self.refreshBuddies()
+		self.buddiesRefresh()
 		
 		#we disable the add button to prevent a double player add
 		self.buddy_add_bt.set_sensitive(False)
-	
+		
 	
 	#===
 	#this function creates a new entry in the buddy list
@@ -660,17 +659,18 @@ class Utl:
 	# a line is selected in the list
 	def buddySelected(self, tree, path=None, column=None):
 		
-		(model, iter) = self.buddies_tree.get_selection().get_selected()
-		server_address = model.get(iter, 7)[0]
-		if server_address:
-			self.buddy_join_bt.set_sensitive(True)
-			
-		else:
-			self.buddy_join_bt.set_sensitive(False)
-
 		#we can delete a buddy offline
 		self.buddy_delete_bt.set_sensitive(True)
-	
+		#non active button by default
+		self.buddy_join_bt.set_sensitive(False)
+		
+		(model, iter) = self.buddies_tree.get_selection().get_selected()
+		if iter:
+			server_address = model.get(iter, 7)[0]
+			if server_address:
+				self.buddy_join_bt.set_sensitive(True)
+
+
 	#===
 	#function to add a player in the buddy list
 	def buddyJoin(self, tree=None, path=None, column=None):
@@ -680,10 +680,36 @@ class Utl:
 		
 		if server_address:
 			self.serverPlay(server_addr_=server_address)
-	
-	
+
+
+	#===
+	#method to handle the DEL key pressed in the buddies tree
+	def buddyDeleteKey(self, widget_, data_event_):
+
+		if data_event_.type==gtk.gdk.KEY_PRESS and gtk.gdk.keyval_name(data_event_.keyval)=='Delete':
+			self.buddyDelete()
+
+		return False
+
+
+	#===
+	#Buddy delete method
 	def buddyDelete(self, data_=None):
-		print "TODO"
+		(model, iter) = self.buddies_tree.get_selection().get_selected()
+		if iter==None:
+			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
+			return False
+
+		try:
+			buddy_file_line = model.get(iter, 8)[0]
+			self.buddies_db.delLine(buddy_file_line)
+			self.buddiesRefresh()
+			return True
+
+
+		except:
+			print( "ERROR AT DELETION IN THE FILE" )
+			return False
 
 
 #main loop
