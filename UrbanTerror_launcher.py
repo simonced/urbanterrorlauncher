@@ -343,7 +343,7 @@ class Utl:
 		# 6 icon status
 		# 7 server address
 		self.buddies_tree = gtk.TreeView(buddies_list )
-		self.buddies_tree.connect("cursor-changed", self.buddy_selected )
+		self.buddies_tree.connect("cursor-changed", self.buddySelected )
 		self.buddies_tree.connect("row-activated", self.buddyJoin )
 		
 		buddies_scroll = gtk.ScrolledWindow()
@@ -380,12 +380,16 @@ class Utl:
 		#then a row of buttons to control the action in the buddy list
 		buddy_row = gtk.HBox()
 		buddies_tab.pack_start(buddy_row, False, False, PaddingDefault)
-		
+
+		#button to delete a buddy
+		self.buddy_delete_bt = UTGUI.Button("Delete", "rsc/delete_ico.png")
+		self.buddy_delete_bt.connect("clicked", self.buddyDelete )
+		buddy_row.pack_end(self.buddy_delete_bt, False, False, PaddingDefault)
+
+		#button to join a buddy
 		self.buddy_join_bt = UTGUI.Button("Join", "rsc/play_ico.png")
 		self.buddy_join_bt.connect("clicked", self.buddyJoin )
 		buddy_row.pack_end(self.buddy_join_bt, False, False, PaddingDefault)
-		
-		#TODO : delete a buddy
 		
 		
 		#la fenetre
@@ -420,6 +424,7 @@ class Utl:
 		self.del_bt.set_sensitive(False)
 		self.buddy_add_bt.set_sensitive(False)
 		self.buddy_join_bt.set_sensitive(False)
+		self.buddy_delete_bt.set_sensitive(False)
 		
 		return True
 	
@@ -653,15 +658,18 @@ class Utl:
 	
 	#===
 	# a line is selected in the list
-	def buddy_selected(self, tree, path=None, column=None):
+	def buddySelected(self, tree, path=None, column=None):
 		
 		(model, iter) = self.buddies_tree.get_selection().get_selected()
 		server_address = model.get(iter, 7)[0]
 		if server_address:
 			self.buddy_join_bt.set_sensitive(True)
+			
 		else:
 			self.buddy_join_bt.set_sensitive(False)
-		
+
+		#we can delete a buddy offline
+		self.buddy_delete_bt.set_sensitive(True)
 	
 	#===
 	#function to add a player in the buddy list
@@ -674,6 +682,9 @@ class Utl:
 			self.serverPlay(server_addr_=server_address)
 	
 	
+	def buddyDelete(self, data_=None):
+		print "TODO"
+
 
 #main loop
 #=========
