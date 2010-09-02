@@ -56,7 +56,9 @@ class ServersRefresh(GlobalThread):
 		#if server files not found, we skip the loading process
 		if not self.win.servers_db:
 			return False
-
+		
+		gobject.idle_add(self.updateStatusBar, "Servers list being refreshed...")
+		
 		#we clean the list (already in memory, unlike widgets)
 		self.win.servers_tree.get_model().clear()
 		self.win.players_tree.get_model().clear()
@@ -80,7 +82,7 @@ class ServersRefresh(GlobalThread):
 				total_loops)
 			
 		
-		gobject.idle_add(self.updateStatusBar, "List updated : %i servers listed." % (loop,) )
+		gobject.idle_add(self.updateStatusBar, "Servers list updated : %i servers" % (loop,) )
 		
 		#refreshing the buddies
 		buddy_t = BuddiesRefresh(self.win)
@@ -91,12 +93,25 @@ class ServersRefresh(GlobalThread):
 	
 	
 	#===
+	#Gui method to display list status
+	def updateStatusBar(self, msg_):
+		self.win.servers_label.set_text(msg_)
+		GlobalThread.updateStatusBar(self, msg_)
+		return False
+	
+	
+	#===
 	#callback to update the listStore of servers.
 	#HAVE to return FALSE
 	#===
 	def updateList(self, list_, current_loop_, total_loops_):
+		#input data
 		self.win.servers_tree.get_model().append( list_ )
-		self.win.statusBar.push(1, "Query of server %s/%s..." % (current_loop_, total_loops_) )
+		
+		#display
+		status = "Query of server %s/%s..." % (current_loop_, total_loops_)
+		self.win.statusBar.push(1, status)
+		
 		return False 
 	
 	
@@ -118,10 +133,16 @@ class ServersRefresh(GlobalThread):
 			address1 = address
 			port2 = UTCFG.DEFAULT_PORT
 		
+		#default buddy ico
+		buddy_picto = UTCFG.BUDDY_OFF_ICO
+		
 		#server query for players
 		utsq_cli = UTSQ.Utsq(address1, int(port2))
 		if utsq_cli.request:
+			#players count
 			players = str(len(utsq_cli.clients)) + " / " + str(utsq_cli.status['sv_maxclients'])
+			players_int = len(utsq_cli.clients)
+			
 			if len(utsq_cli.clients)>0 and len(utsq_cli.clients)<utsq_cli.status['sv_maxclients']:
 				players = "<b>" + players + "</b>"
 			mapname = utsq_cli.status['mapname']
@@ -140,6 +161,7 @@ class ServersRefresh(GlobalThread):
 		else:
 			#case we can't query the server
 			players = "ERR"
+			players_int = 0
 			mapname = "ERR"
 			servername = "<i>" + conf_name + "</i>"
 			raw_name = UTCT.raw_string( conf_name )
@@ -148,7 +170,18 @@ class ServersRefresh(GlobalThread):
 		#closing the socket with the server
 		utsq_cli.close()
 		
-		return (servername, address, type, players, mapname, color, conf_name, loop_, raw_name, ping)
+		return (servername, 
+			address, 
+			type, 
+			players, 
+			mapname, 
+			color, 
+			conf_name, 
+			loop_, 
+			raw_name, 
+			ping, 
+			players_int,
+			buddy_picto)
 
 
 #=====================================================
@@ -164,7 +197,7 @@ class BuddiesRefresh(GlobalThread):
 	def run(self):
 		
 		#we clean the buddi list in the window object
-		self.win.buddies = []	#same for buddies
+		self.win.buddies = []
 		
 		#if server files not found, we skip the loading process
 		if not self.win.buddies_db:
@@ -190,9 +223,13 @@ class BuddiesRefresh(GlobalThread):
 			picto = UTCFG.BUDDY_OFF_ICO #defaut offline picto
 			server_address = ""
 			
+			#control of this buddy with all players connected in the servers list
 			for server in self.win.players:
 				server_players_str = "/".join(self.win.players[server])
+				#we found a buddy online ?
+				
 				if re.search(re.escape(buddy_raw), server_players_str ):
+					#--- buddy list update ---
 					picto = UTCFG.BUDDY_ON_ICO
 					
 					#adapting the already prepared data to match the online status
@@ -202,6 +239,13 @@ class BuddiesRefresh(GlobalThread):
 					buddy_markup = "<b>%s</b>" % (buddy_markup, )
 					server_markup = UTCT.console_colors_to_markup(server_raw)
 					server_address = server
+					#--- / buddy list update ---
+					
+					
+					#--- server players column picto update ---
+					gobject.idle_add(self.severs_buddy_update_idle, server_address )
+					#--- / server players column picto update ---
+					
 					break
 				
 			
@@ -222,7 +266,7 @@ class BuddiesRefresh(GlobalThread):
 			
 			
 		#end of the list of buddies update process
-		gobject.idle_add(self.updateStatusBar, "List updated : %i buddies listed." % (loop,) )
+		gobject.idle_add(self.updateStatusBar, "Buddies list updated : %i buddies" % (loop,) )
 		
 		return True
 	
@@ -232,13 +276,30 @@ class BuddiesRefresh(GlobalThread):
 	#HAVE to return FALSE
 	#===
 	def updateList(self, list_, current_loop_, total_loops_):
-		#update of inner memory
+		#update of inner memory (only buddy name)
 		self.win.buddies.append(list_[0])
 		
 		#update of gui elements
 		self.win.buddies_tree.get_model().append( list_ )
 		self.win.statusBar.push(1, "Updating buddy status %s/%s..." % (current_loop_, total_loops_) )
 		return False
+	
+	
+	#===
+	#idle call to update the buddy icon in the server list if a buddy is connected
+	#HAVE TO RETURN FALSE
+	def severs_buddy_update_idle(self, server_address_):
+		self.win.servers_tree.get_model().foreach(self.severs_buddy_update, server_address_)
+		
+		return False
+	
+	
+	#===
+	#check and update of one line of the servers in the model
+	def severs_buddy_update(self, model_, path_, iter_, server_address_):
+		if model_.get_value(iter_, 1) == server_address_:
+			model_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
+	
 	
 	
 #===

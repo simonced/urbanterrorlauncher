@@ -8,7 +8,7 @@ This is a tool to save your prefered servers you play often on.
 """
 
 __author__="Simonced@gmail.com"
-__version__="0.7.7"
+__version__="0.7.8"
 
 DEBUG = False
 
@@ -55,7 +55,7 @@ class Utl:
 		
 		#basic vars used in the GUI
 		self.players = {}	#empty dict, the key is the server address, then a list of players
-		self.buddies = []
+		self.buddies = []	
 		self.servers = {}	
 		#sample {"127.0.0.1":{"name":"Local server", "map":"ut4_icy5b", "type":"FFA"}}
 		
@@ -87,17 +87,19 @@ class Utl:
 		# == Section1 == Listing and launching a server
 		
 		#model for the view (ListStore)
-		servers_list = gtk.ListStore(\
-			gobject.TYPE_STRING, \
-			gobject.TYPE_STRING, \
-			gobject.TYPE_STRING, \
-			gobject.TYPE_STRING, \
-			gobject.TYPE_STRING, \
-			gobject.TYPE_STRING, \
-			gobject.TYPE_STRING, \
+		servers_list = gtk.ListStore(
+			gobject.TYPE_STRING,
+			gobject.TYPE_STRING,
+			gobject.TYPE_STRING,
+			gobject.TYPE_STRING,
+			gobject.TYPE_STRING,
+			gobject.TYPE_STRING,
+			gobject.TYPE_STRING,
 			gobject.TYPE_INT,
 			str,
-			int)
+			int,
+			int,
+			gtk.gdk.Pixbuf)
 
 		# model :
 		# 0 name (markup)
@@ -108,11 +110,19 @@ class Utl:
 		# 5 color (GUI info)
 		# 6 Alias (input from user, not really needed)
 		# 7 file line number for edit or deletion
-		# 8 raw name of the server without markup or colors to be sorted in the name column of the treeview
+		# 8 raw_name of the server without markup or colors to be sorted in the name column of the treeview
 		# 9 ping of the server
+		# 10 number of players connected (int for sorting)
+		# 11 Buddy online on this server?
+		
 		#display object (TreeView)
 		self.servers_tree = gtk.TreeView(servers_list)
-
+		
+		#signal on click of a line
+		self.servers_tree.connect("cursor-changed", self.serverEdit)
+		self.servers_tree.connect("row-activated", self.serverPlay)
+		self.servers_tree.connect("key-press-event", self.serverDeleteKey)
+		
 		#cell to render content
 		cell = gtk.CellRendererText()
 		#cell to render buddy status
@@ -122,9 +132,15 @@ class Utl:
 		column_name = gtk.TreeViewColumn('Name', cell, markup=0, background=5)
 		column_address = gtk.TreeViewColumn('Address', cell, text=1, background=5)
 		column_type = gtk.TreeViewColumn('Type', cell, text=2, background=5)
-		column_players = gtk.TreeViewColumn('Players', cell, markup=3, background=5)
+		column_players = gtk.TreeViewColumn('Players')	#, cell, markup=3, background=5
 		column_ping = gtk.TreeViewColumn('Ping', cell, text=9, background=5)
 		column_map = gtk.TreeViewColumn('Map', cell, text=4, background=5)
+		
+		column_players.pack_start(cell, expand=True)
+		column_players.add_attribute(cell, "markup", 3)
+		column_players.add_attribute(cell, "background", 5)
+		column_players.pack_start(cell_buddy_status, expand=False)
+		column_players.add_attribute(cell_buddy_status, "pixbuf", 11)
 		
 		#adding the columns to the treeview
 		self.servers_tree.append_column(column_name)
@@ -145,17 +161,13 @@ class Utl:
 		#sort ok
 		column_name.set_sort_column_id(8)	#using the raw name of the server for sorting
 		column_type.set_sort_column_id(2)
-		column_players.set_sort_column_id(3)
+		column_players.set_sort_column_id(10)
 		column_ping.set_sort_column_id(9)
 		#the number is just an order id, if 2 columns sort have same ideas, the sort will effect both columns
 		column_name.clicked()	#column 0 sorted from beginning
 		
 		column_name.set_min_width(200)		#sizes to make it look better
 		column_address.set_min_width(160)		#sizes to make it look better
-		
-		#signal on click of a line
-		self.servers_tree.connect("cursor-changed", self.serverEdit)
-		self.servers_tree.connect("row-activated", self.serverPlay)
 		
 		#we need a servers_scroll pane for the servers_tree!
 		servers_scroll = gtk.ScrolledWindow()
@@ -179,6 +191,10 @@ class Utl:
 		self.refresh_bt = UTGUI.Button("Refresh", "rsc/refresh_ico.png")
 		self.refresh_bt.connect("clicked", self.refreshServers)
 		row_treeBts.pack_end(self.refresh_bt, False, False, PaddingDefault)
+		
+		#simple label that indicates how many server displayed
+		self.servers_label = gtk.Label("Servers listed")
+		row_treeBts.pack_start(self.servers_label, False, False, PaddingDefault)
 		
 		server_tab.pack_start(row_treeBts, False, False, PaddingDefault)
 		
@@ -257,9 +273,9 @@ class Utl:
 		
 		#the columns for the view
 		column_player_name = gtk.TreeViewColumn('Name')
-		column_player_name.pack_start(cell_buddy_status, True)
+		column_player_name.pack_start(cell_buddy_status, expand=False)
 		column_player_name.add_attribute(cell_buddy_status, "pixbuf", 5)
-		column_player_name.pack_start(cell, True)
+		column_player_name.pack_start(cell, expand=True)
 		column_player_name.add_attribute(cell, "markup", 4)
 		column_player_name.add_attribute(cell, "background", 3)
 		
@@ -446,11 +462,12 @@ class Utl:
 		#full players list
 		model_players = self.players_tree.get_model()
 		model_players.clear()
+		#if this server contains players
 		if address in self.players:
 			for player in self.players[ address ]:
 				(score_full, name ) = player.split('"')[0:2]
 				(score, ping) = score_full.split(' ', 1)
-				name_color = UTCOLORS.console_colors_to_markup( name )
+				name_markup = UTCOLORS.console_colors_to_markup( name )
 				#picto for buddies
 				picto = None
 				if name in self.buddies:
@@ -461,7 +478,7 @@ class Utl:
 					int(score.strip()), \
 					int(ping.strip()), \
 					UTCFG.DEFAULT_BG_COLOR, \
-					name_color, \
+					name_markup, \
 					picto) \
 				)
 		
@@ -506,7 +523,8 @@ class Utl:
 	
 	#===
 	#deleting a line from the servers_tree view
-	def serverDelete(self, tree_):
+	def serverDelete(self, data_=None):
+		
 		(model, iter) = self.servers_tree.get_selection().get_selected()
 		if iter==None:
 			print("ERROR RECEIVING THE LINE SELECTED IN THE TREEVIEW")
@@ -523,8 +541,18 @@ class Utl:
 		except:
 			print( "ERROR AT DELETION IN THE FILE" )
 			return False
-
-
+	
+	
+	#===
+	#method to handle the DEL key pressed in the servers tree
+	def serverDeleteKey(self, widget_, data_event_):
+		
+		if data_event_.type==gtk.gdk.KEY_PRESS and gtk.gdk.keyval_name(data_event_.keyval)=='Delete':
+			self.serverDelete()
+		
+		return False	
+	
+	
 	#===
 	#deleting a line from the tree view
 	def serverPlay(self, tree=None, path=None, column=None, server_addr_=None):
