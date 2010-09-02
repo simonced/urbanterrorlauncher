@@ -83,7 +83,7 @@ class ServersRefresh(GlobalThread):
 			
 		
 		gobject.idle_add(self.updateStatusBar, "Servers list updated : %i servers" % (loop,) )
-		
+
 		#refreshing the buddies
 		buddy_t = BuddiesRefresh(self.win)
 		buddy_t.start()
@@ -151,7 +151,13 @@ class ServersRefresh(GlobalThread):
 			ping = int( str(utsq_cli.ping*1000).split('.')[0][0:3] )
 			
 			#we save at the same time the list of players online for this address ;)
-			self.win.players[address] = utsq_cli.clients
+			self.win.players[address]=[]	#new entry as array for this server address
+			for player in utsq_cli.clients:
+				(score_full, player_name ) = player.split('"')[0:2]
+				(player_score, player_ping) = score_full.split(' ', 1)
+				#adding the 3 infos concerning players
+				self.win.players[address].append( (int(player_score), int(player_ping), player_name) )
+
 			#and the server status in the list linked by address
 			self.win.servers[address] = {"name":utsq_cli.status['sv_hostname'], \
 				"map":utsq_cli.status['mapname'], \
@@ -226,7 +232,7 @@ class BuddiesRefresh(GlobalThread):
 			
 			#control of this buddy with all players connected in the servers list
 			for server in self.win.players:
-				server_players_str = "/".join(self.win.players[server])
+				server_players_str = "/".join( [ player[2] for player in self.win.players[server] ] )
 				#we found a buddy online ?
 				
 				if re.search(re.escape(buddy_raw), server_players_str ):

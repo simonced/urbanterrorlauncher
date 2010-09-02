@@ -23,7 +23,6 @@ import os, re
 import shlex
 
 #sub tools - URT specific
-import UrbanTerror_server_query as UTSQ
 import UrtLauncherThreads as UTTHREAD
 import UrbanTerror_colors_tools as UTCOLORS
 import UrtLauncherGui as UTGUI
@@ -54,7 +53,7 @@ class Utl:
 		self.loadCfg()
 		
 		#basic vars used in the GUI
-		self.players = {}	#empty dict, the key is the server address, then a list of players
+		self.players = {}	#empty dict, the key is the server address, then (score, ping, name)
 		self.buddies = []	
 		self.servers = {}	
 		#sample {"127.0.0.1":{"name":"Local server", "map":"ut4_icy5b", "type":"FFA"}}
@@ -470,21 +469,20 @@ class Utl:
 		#if this server contains players
 		if address in self.players:
 			for player in self.players[ address ]:
-				(score_full, name ) = player.split('"')[0:2]
-				(score, ping) = score_full.split(' ', 1)
+				(score, ping, name) = player
 				name_markup = UTCOLORS.console_colors_to_markup( name )
 				#picto for buddies
 				picto = None
 				if name in self.buddies:
 					picto = UTCFG.BUDDY_ON_ICO
 					
-				model_players.append( \
-					(name, \
-					int(score.strip()), \
-					int(ping.strip()), \
-					UTCFG.DEFAULT_BG_COLOR, \
-					name_markup, \
-					picto) \
+				model_players.append(
+					(name,
+					score,
+					ping,
+					UTCFG.DEFAULT_BG_COLOR,
+					name_markup,
+					picto)
 				)
 		
 		#loop for game types
