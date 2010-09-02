@@ -112,7 +112,7 @@ class Utl:
 		# 8 raw_name of the server without markup or colors to be sorted in the name column of the treeview
 		# 9 ping of the server
 		# 10 number of players connected (int for sorting)
-		# 11 Buddy online on this server?
+		# 11 Buddy online on this server? PixBuf
 		
 		#display object (TreeView)
 		self.servers_tree = gtk.TreeView(servers_list)
@@ -134,12 +134,12 @@ class Utl:
 		column_players = gtk.TreeViewColumn('Players')	#, cell, markup=3, background=5
 		column_ping = gtk.TreeViewColumn('Ping', cell, text=9, background=5)
 		column_map = gtk.TreeViewColumn('Map', cell, text=4, background=5)
-		
+
+		column_players.pack_start(cell_buddy_status, expand=False)
+		column_players.add_attribute(cell_buddy_status, "pixbuf", 11)
 		column_players.pack_start(cell, expand=True)
 		column_players.add_attribute(cell, "markup", 3)
 		column_players.add_attribute(cell, "background", 5)
-		column_players.pack_start(cell_buddy_status, expand=False)
-		column_players.add_attribute(cell_buddy_status, "pixbuf", 11)
 		
 		#adding the columns to the treeview
 		self.servers_tree.append_column(column_name)
