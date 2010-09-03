@@ -8,7 +8,7 @@ This is a tool to save your prefered servers you play often on.
 """
 
 __author__="Simonced@gmail.com"
-__version__="0.7.8"
+__version__="0.7.9"
 
 DEBUG = False
 
@@ -128,18 +128,19 @@ class Utl:
 		cell_buddy_status = gtk.CellRendererPixbuf()
 		
 		#column view
-		column_name = gtk.TreeViewColumn('Name', cell, markup=0, background=5)
-		column_address = gtk.TreeViewColumn('Address', cell, text=1, background=5)
-		column_type = gtk.TreeViewColumn('Type', cell, text=2, background=5)
-		column_players = gtk.TreeViewColumn('Players')	#, cell, markup=3, background=5
-		column_ping = gtk.TreeViewColumn('Ping', cell, text=9, background=5)
-		column_map = gtk.TreeViewColumn('Map', cell, text=4, background=5)
+		column_name = gtk.TreeViewColumn('Name', cell, markup=0, cell_background=5)
+		column_address = gtk.TreeViewColumn('Address', cell, text=1, cell_background=5)
+		column_type = gtk.TreeViewColumn('Type', cell, text=2, cell_background=5)
+		column_players = gtk.TreeViewColumn('Players')
+		column_ping = gtk.TreeViewColumn('Ping', cell, text=9, cell_background=5)
+		column_map = gtk.TreeViewColumn('Map', cell, text=4, cell_background=5)
 
 		column_players.pack_start(cell_buddy_status, expand=False)
 		column_players.add_attribute(cell_buddy_status, "pixbuf", 11)
+                column_players.add_attribute(cell_buddy_status, "cell-background", 5)
 		column_players.pack_start(cell, expand=True)
 		column_players.add_attribute(cell, "markup", 3)
-		column_players.add_attribute(cell, "background", 5)
+		column_players.add_attribute(cell, "cell-background", 5)
 		
 		#adding the columns to the treeview
 		self.servers_tree.append_column(column_name)
@@ -274,12 +275,13 @@ class Utl:
 		column_player_name = gtk.TreeViewColumn('Name')
 		column_player_name.pack_start(cell_buddy_status, expand=False)
 		column_player_name.add_attribute(cell_buddy_status, "pixbuf", 5)
+		column_player_name.add_attribute(cell_buddy_status, "cell-background", 3)
 		column_player_name.pack_start(cell, expand=True)
 		column_player_name.add_attribute(cell, "markup", 4)
-		column_player_name.add_attribute(cell, "background", 3)
+		column_player_name.add_attribute(cell, "cell-background", 3)
 		
-		column_player_score = gtk.TreeViewColumn('Score', cell, text=1, background=3)
-		column_player_ping = gtk.TreeViewColumn('Ping', cell, text=2, background=3)
+		column_player_score = gtk.TreeViewColumn('Score', cell, text=1, cell_background=3)
+		column_player_ping = gtk.TreeViewColumn('Ping', cell, text=2, cell_background=3)
 		#adding the columns to the treeview
 		self.players_tree.append_column(column_player_name)
 		self.players_tree.append_column(column_player_score)
@@ -353,10 +355,10 @@ class Utl:
 		buddies_scroll.add( self.buddies_tree )
 		
 		#columns needed
-		buddy_status_col = gtk.TreeViewColumn(None, cell_buddy_status, pixbuf=6)
-		buddy_name_col = gtk.TreeViewColumn('Name', cell, markup=4, background=3)
-		buddy_server_name = gtk.TreeViewColumn('Server', cell, markup=5, background=3)
-		buddy_server_map = gtk.TreeViewColumn('Map', cell, text=2, background=3)
+		buddy_status_col = gtk.TreeViewColumn(None, cell_buddy_status, pixbuf=6, cell_background=3)
+		buddy_name_col = gtk.TreeViewColumn('Name', cell, markup=4, cell_background=3)
+		buddy_server_name = gtk.TreeViewColumn('Server', cell, markup=5, cell_background=3)
+		buddy_server_map = gtk.TreeViewColumn('Map', cell, text=2, cell_background=3)
 		# once columns are set, adding the columns to the treeview
 		self.buddies_tree.append_column(buddy_status_col)
 		self.buddies_tree.append_column(buddy_name_col)
