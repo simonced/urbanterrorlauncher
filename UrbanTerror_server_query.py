@@ -33,9 +33,9 @@ class Utsq:
 			self.sock.settimeout(1.0)  # timeout of 1 second
 			
 			#patch to get the ping value
-			start = time.clock()
-			self.getall()
-			self.ping = time.clock() - start
+                        start = time.time()
+                        self.getall()
+			self.ping = time.time() - start
 			
 		except socket.error:
 			print "Error at connexio with %s:%s\n" % (host, port)

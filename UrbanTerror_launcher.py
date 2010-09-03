@@ -20,7 +20,6 @@ import gobject
 
 #system and re imports
 import os, re
-import shlex
 
 #sub tools - URT specific
 import UrtLauncherThreads as UTTHREAD
