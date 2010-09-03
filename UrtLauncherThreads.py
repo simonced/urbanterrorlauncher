@@ -302,11 +302,9 @@ class BuddiesRefresh(GlobalThread):
 		#the player list is linked to the server address
 		(model, paths) = self.win.servers_tree.get_selection().get_selected_rows()
 		if paths:
-			print paths
 			#only if one server is selected, we display the list of players
-			#just the icons()
 			self.win.servers_tree.set_cursor(paths[0])
-			#reselect the same line? triggers the events?
+			#reselect the same line that triggers the event
 
 		return False
 
