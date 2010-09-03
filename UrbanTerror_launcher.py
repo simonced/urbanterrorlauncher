@@ -635,9 +635,8 @@ class Utl:
 		
 		(model, iter) = self.players_tree.get_selection().get_selected()
 		player_name = model.get(iter, 0)[0]	# column in model > part of the cell (only one in many cases)
-		model[iter][5] = UTCFG.BUDDY_ON_ICO
 		self.buddyAddLine(player_name)
-		self.buddiesRefresh()
+		self.buddiesRefresh()	#The refresh update the playes buddy icons ;)
 		
 		#we disable the add button to prevent a double player add
 		self.buddy_add_bt.set_sensitive(False)

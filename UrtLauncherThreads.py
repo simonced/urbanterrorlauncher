@@ -299,7 +299,14 @@ class BuddiesRefresh(GlobalThread):
 		self.win.servers_tree.get_model().foreach(self.updateServersTabLine)
 
 		#check for each player selected if any
-		#TODO
+		#the player list is linked to the server address
+		(model, paths) = self.win.servers_tree.get_selection().get_selected_rows()
+		if paths:
+			print paths
+			#only if one server is selected, we display the list of players
+			#just the icons()
+			self.win.servers_tree.set_cursor(paths[0])
+			#reselect the same line? triggers the events?
 
 		return False
 
@@ -321,6 +328,22 @@ class BuddiesRefresh(GlobalThread):
 					tree_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
 					break
 
+
+	#===
+	#update on one server
+	def updateServersTabPlayerLine(self, tree_, path_, iter_, data_=None):
+		#reset the icon
+		tree_.set_value(iter_, 11, UTCFG.BUDDY_OFF_ICO)
+
+		
+		#players on this server?
+		if address in self.win.players:
+			#we compare each player in the buddy list
+			for buddy in self.win.buddies:
+				#buddy online?
+				if buddy in [player[2] for player in self.win.players[address]]:
+					tree_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
+					break
 
 	
 #===
