@@ -33,8 +33,8 @@ class Utsq:
 			self.sock.settimeout(1.0)  # timeout of 1 second
 			
 			#patch to get the ping value
-            start = time.time()
-            self.getall()
+			start = time.time()
+			self.getall()
 			self.ping = time.time() - start
 			
 		except socket.error:
