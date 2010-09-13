@@ -7,8 +7,8 @@ simonced@gmail.com
 This is a tool to save your prefered servers you play often on.
 """
 
-__author__="Simonced@gmail.com"
-__version__="0.7.9"
+__author__="simonced@gmail.com"
+__version__="0.8"
 
 DEBUG = False
 
@@ -394,7 +394,11 @@ class Utl:
 		self.buddy_join_bt = UTGUI.Button("Join", "rsc/play_ico.png")
 		self.buddy_join_bt.connect("clicked", self.buddyJoin )
 		buddy_row.pack_end(self.buddy_join_bt, False, False, PaddingDefault)
-		
+
+                #button to search buddies on other servers
+		self.buddy_search_bt = UTGUI.Button("Search", "rsc/search_ico.png")
+		self.buddy_search_bt.connect("clicked", self.buddySearch )
+		buddy_row.pack_end(self.buddy_search_bt, False, False, PaddingDefault)
 		
 		#la fenetre
 		#----------
@@ -678,6 +682,15 @@ class Utl:
 		
 		if server_address:
 			self.serverPlay(server_addr_=server_address)
+
+
+        #===
+        #Launches a search of the buddies on all online servers, trough Master Server
+        def buddySearch(self, widget_=None, data_=None):
+
+            t = UTTHREAD.BuddiesSearch(self)
+            t.start()
+
 
 
 	#===

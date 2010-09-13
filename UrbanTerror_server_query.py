@@ -65,7 +65,7 @@ class Utsq:
                         data = self.raw_response.split("\n")	# part0 : headers, part1 : status, part2 players
                         
 		except:
-			print self.host + "SENDING %s COMMAND TO SERVER FAILED" % cmd_
+			print self.host + " SENDING %s COMMAND TO SERVER FAILED" % cmd_
 		
 		return data
 	
@@ -151,7 +151,17 @@ class Utsq:
 	#fermeture de la connxion
 	def close(self):
 		self.sock.close()
-	
+
+
+#===
+#simple hook to get the online servers with players
+def masterQuery():
+    print "=== MASTER QUERY ==="
+    master = Utsq("master.urbanterror.net", 27950, False)
+    servers = master.getMasterStatus()
+    master.close()
+    return servers
+
 
 #main loop
 #=========

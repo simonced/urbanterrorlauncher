@@ -20,7 +20,7 @@ DEFAULT_BG_COLOR = "#EEEEEE"
 #buddy icons
 BUDDY_ON_ICO = gtk.gdk.pixbuf_new_from_file("rsc/buddy_ico.png")
 BUDDY_OFF_ICO = gtk.gdk.pixbuf_new_from_file("rsc/buddy_off_ico.png")
-
+BUDDY_OUT_ICO = gtk.gdk.pixbuf_new_from_file("rsc/buddy_out_ico.png")
 
 ServersFile = "UrbanTerror_launcher.txt"
 BuddiesFile = "UrbanTerror_buddies.txt"

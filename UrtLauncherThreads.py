@@ -7,6 +7,7 @@ This is a tool to be used by UrbanTerrorLauncher.
 '''
 
 #import gtk
+from UrtLauncherConfig import BUDDY_OUT_ICO
 import gobject
 
 #common configuration is here
@@ -37,6 +38,7 @@ class GlobalThread(Thread):
 	def updateStatusBar(self, msg_):
 		self.win.statusBar.push(1, msg_ )
 		return False
+
 
 
 #===
@@ -452,5 +454,81 @@ class ServerPlay(GlobalThread):
 	#===
 	#called from thread, refreshes the server list
 	def serversRefresh(self):
-		 self.win.refreshServers()
-		 return False
+		self.win.refreshServers()
+		return False
+
+
+
+#===
+#Threading the search of buddies in other servers
+#===
+class BuddiesSearch(GlobalThread):
+
+	def __init__(self, win_):
+		super(BuddiesSearch, self).__init__()
+		#@param win_ is the urt object with gui and other props
+		self.win = win_
+
+
+        #===
+        #let's serch for players on other servers
+        def run(self):
+            gobject.idle_add(self.updateStatusBar, "Searching for buddies from the Master Server...")
+
+            servers = UTSQ.masterQuery()
+            i = 0
+            for server in servers:
+                i += 1
+                gobject.idle_add(self.updateStatusBar,
+                    "Searching for buddies from the Master Server : %i / %i" % (i, len(servers)) )
+
+                #query of the server
+                addr, port = server.split(":")
+                serv = UTSQ.Utsq(addr, int(port) )
+                players = serv.clients
+                players_str = ".".join(players)
+
+                for buddy in self.win.buddies:
+                    if players_str.find(buddy) >= 0:
+                        print "%s is found on the server : %s" % (buddy, server)
+
+                        self.win.buddies_tree.get_model().foreach(self.updateBuddyLine,
+                            (UTCT.raw_string(buddy),
+                            UTCT.raw_string(serv.status['sv_hostname']),
+                            serv.status['mapname'],
+                            UTCT.console_colors_to_markup(buddy),
+                            UTCT.console_colors_to_markup(serv.status['sv_hostname']),
+                            server) )
+                            # 0 buddy name
+                            # 1 server playing if connected
+                            # 2 map on the playing server
+                            # 4 buddy name markup
+                            # 5 server name markup
+                            # 7 server address
+
+                #close the server socket
+                serv.close()
+
+                gobject.idle_add(self.updateStatusBar, "Searching for buddies from the Master Server : Finished")
+
+
+        #===
+        #update of the model of buddies
+	def updateBuddyLine(self, tree_, path_, iter_, data_):
+            #data_ struct (numbers are index in the model)
+            # 0 buddy name
+            # 1 server playing if connected
+            # 2 map on the playing server
+            # 4 buddy name markup
+            # 5 server name markup
+            # 7 server address
+                
+            #current buddy found on another server?
+            if tree_.get_value(iter_, 0) == data_[0] and tree_.get_value(iter_, 6) != UTCFG.BUDDY_ON_ICO:
+
+                tree_.set_value(iter_, 1, data_[1])
+                tree_.set_value(iter_, 2, data_[2])
+                tree_.set_value(iter_, 4, data_[3])
+                tree_.set_value(iter_, 5, data_[4])
+                tree_.set_value(iter_, 6, UTCFG.BUDDY_OUT_ICO)
+                tree_.set_value(iter_, 7, data_[5])
