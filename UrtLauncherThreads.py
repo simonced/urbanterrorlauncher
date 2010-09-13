@@ -464,52 +464,46 @@ class ServerPlay(GlobalThread):
 #===
 class BuddiesSearch(GlobalThread):
 
-	def __init__(self, win_):
+	def __init__(self, win_, server_addr_):
 		super(BuddiesSearch, self).__init__()
 		#@param win_ is the urt object with gui and other props
 		self.win = win_
+                self.server_addr = server_addr_
 
 
         #===
         #let's serch for players on other servers
         def run(self):
-            gobject.idle_add(self.updateStatusBar, "Searching for buddies from the Master Server...")
 
-            servers = UTSQ.masterQuery()
-            i = 0
-            for server in servers:
-                i += 1
-                gobject.idle_add(self.updateStatusBar,
-                    "Searching for buddies from the Master Server : %i / %i" % (i, len(servers)) )
+            #query of the server
+            addr, port = self.server_addr.split(":")
+            serv = UTSQ.Utsq(addr, int(port) )
+            players_str = ".".join(serv.clients)
 
-                #query of the server
-                addr, port = server.split(":")
-                serv = UTSQ.Utsq(addr, int(port) )
-                players = serv.clients
-                players_str = ".".join(players)
+            for buddy in self.win.buddies:
+                if players_str.find(buddy) >= 0:
+                    print "%s is found on the server : %s" % (buddy, self.server_addr)
 
-                for buddy in self.win.buddies:
-                    if players_str.find(buddy) >= 0:
-                        print "%s is found on the server : %s" % (buddy, server)
+                    self.win.buddies_tree.get_model().foreach(self.updateBuddyLine,
+                        (UTCT.raw_string(buddy),
+                        UTCT.raw_string(serv.status['sv_hostname']),
+                        serv.status['mapname'],
+                        UTCT.console_colors_to_markup(buddy),
+                        UTCT.console_colors_to_markup(serv.status['sv_hostname']),
+                        self.server_addr) )
+                        # 0 buddy name
+                        # 1 server playing if connected
+                        # 2 map on the playing server
+                        # 4 buddy name markup
+                        # 5 server name markup
+                        # 7 server address
 
-                        self.win.buddies_tree.get_model().foreach(self.updateBuddyLine,
-                            (UTCT.raw_string(buddy),
-                            UTCT.raw_string(serv.status['sv_hostname']),
-                            serv.status['mapname'],
-                            UTCT.console_colors_to_markup(buddy),
-                            UTCT.console_colors_to_markup(serv.status['sv_hostname']),
-                            server) )
-                            # 0 buddy name
-                            # 1 server playing if connected
-                            # 2 map on the playing server
-                            # 4 buddy name markup
-                            # 5 server name markup
-                            # 7 server address
+            #close the server socket
+            serv.close()
 
-                #close the server socket
-                serv.close()
-
-                gobject.idle_add(self.updateStatusBar, "Searching for buddies from the Master Server : Finished")
+            self.win.server_search_count += 1
+            gobject.idle_add(self.updateStatusBar,
+                "Searching for buddies from the Master Server : %i / %i" % (self.win.server_search_count, self.win.server_search_total) )
 
 
         #===
@@ -523,8 +517,8 @@ class BuddiesSearch(GlobalThread):
             # 5 server name markup
             # 7 server address
                 
-            #current buddy found on another server?
-            if tree_.get_value(iter_, 0) == data_[0] and tree_.get_value(iter_, 6) != UTCFG.BUDDY_ON_ICO:
+            #current buddy found on another server? (current server address to be compared in model instead than the icon status)
+            if tree_.get_value(iter_, 0)==data_[0] and tree_.get_value(iter_, 7)!=data_[5]:
 
                 tree_.set_value(iter_, 1, data_[1])
                 tree_.set_value(iter_, 2, data_[2])
