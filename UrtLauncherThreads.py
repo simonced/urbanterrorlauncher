@@ -21,6 +21,7 @@ import re
 
 import UrbanTerror_server_query as UTSQ
 import UrbanTerror_colors_tools as UTCT
+import UrtLauncherGui as UTGUI
 
 
 #================================
@@ -195,87 +196,94 @@ class ServersRefresh(GlobalThread):
 #=====================================================
 # Thread that refreshes the buddies in the buddies tab
 class BuddiesRefresh(GlobalThread):
-
+        
+        buddies_online = 0
+        
 	def __init__(self, win_):
-		super(BuddiesRefresh, self).__init__()
-		#@param win_ is the urt object with gui and other props
-		self.win = win_
-	
+            super(BuddiesRefresh, self).__init__()
+            #@param win_ is the urt object with gui and other props
+            self.win = win_
+
 	
 	def run(self):
-		
-		#we clean the buddi list in the window object
-		self.win.buddies = []
-		
-		#if server files not found, we skip the loading process
-		if not self.win.buddies_db:
-			return False
+            #if server files not found, we skip the loading process
+            if not self.win.buddies_db:
+                return False
 
-		#we clean the list (already in memory, unlike widgets)
-		self.win.buddies_tree.get_model().clear()
-		
-		#then we open the file and fill in the list			
-		loop = 0
-		lines = self.win.buddies_db.getAllLines()
-		total_loops = len(lines)
-		for line in lines:
-			#to keep track of the line number
-			loop = loop + 1
-			
-			buddy_raw = line
-			server_raw = "OFFLINE"
-			map_name = "OFFLINE"
-			bgcolor=UTCFG.DEFAULT_BG_COLOR
-			buddy_markup = UTCT.console_colors_to_markup(buddy_raw)
-			server_markup = UTCT.console_colors_to_markup(server_raw)
-			picto = UTCFG.BUDDY_OFF_ICO #defaut offline picto
-			server_address = ""
-			buddy_line = loop
+            #we clean the buddi list in the window object
+            self.win.buddies = []
 
-			#control of this buddy with all players connected in the servers list
-			for server in self.win.players:
-				server_player_names = [ player[2] for player in self.win.players[server] ]
+            #we clean the list (already in memory, unlike widgets)
+            self.win.buddies_tree.get_model().clear()
 
-				#we found a buddy online ?
-				if buddy_raw in server_player_names:
-					#--- buddy list update ---
-					picto = UTCFG.BUDDY_ON_ICO
-					
-					#adapting the already prepared data to match the online status
-					server_raw = self.win.servers[server]['name']
-					map_name = self.win.servers[server]['map']
-					bgcolor = UTCFG.GameColors[ self.win.servers[server]['type'] ]
-					buddy_markup = "<b>%s</b>" % (buddy_markup, )
-					server_markup = UTCT.console_colors_to_markup(server_raw)
-					server_address = server
-					#--- / buddy list update ---
+            #then we open the file and fill in the list
+            loop = 0
+            lines = self.win.buddies_db.getAllLines()
+            total_loops = len(lines)
+            for line in lines:
+                #to keep track of the line number
+                loop = loop + 1
 
-					break
+                buddy_raw = line
+                server_raw = "OFFLINE"
+                map_name = "OFFLINE"
+                bgcolor = UTCFG.DEFAULT_BG_COLOR
+                buddy_markup = UTCT.console_colors_to_markup(buddy_raw)
+                server_markup = UTCT.console_colors_to_markup(server_raw)
+                picto = UTCFG.BUDDY_OFF_ICO #defaut offline picto
+                server_address = ""
+                buddy_line = loop
 
-			#ready to update the buddy tree view thru the model
-			data = (buddy_raw,
-				server_raw,
-				map_name,
-				bgcolor,
-				buddy_markup,
-				server_markup,
-				picto,
-				server_address,
-				buddy_line)
-			
-			#update of the model and inner list
-			gobject.idle_add(self.updateList,
-				data,
-				loop,
-				total_loops)
-			
-		#end of the list of buddies update process
-		gobject.idle_add(self.updateStatusBar, "Buddies list updated : %i buddies" % (loop,) )
+                """
+                    #control of this buddy with all players connected in the servers list
+                    for server in self.win.players:
+                            server_player_names = [ player[2] for player in self.win.players[server] ]
 
-		#update of the server tab
-		gobject.idle_add(self.updateServersTab)
+                            #we found a buddy online ?
+                            if buddy_raw in server_player_names:
+                                    #--- buddy list update ---
+                                    picto = UTCFG.BUDDY_ON_ICO
 
-		return True
+                                    #adapting the already prepared data to match the online status
+                                    server_raw = self.win.servers[server]['name']
+                                    map_name = self.win.servers[server]['map']
+                                    bgcolor = UTCFG.GameColors[ self.win.servers[server]['type'] ]
+                                    buddy_markup = "<b>%s</b>" % (buddy_markup, )
+                                    server_markup = UTCT.console_colors_to_markup(server_raw)
+                                    server_address = server
+                                    #--- / buddy list update ---
+
+                                    break
+                    """
+
+                #ready to update the buddy tree view thru the model
+                data = (buddy_raw,
+                        server_raw,
+                        map_name,
+                        bgcolor,
+                        buddy_markup,
+                        server_markup,
+                        picto,
+                        server_address,
+                        buddy_line)
+
+                #update of the model and inner list
+                gobject.idle_add(self.updateList,
+                                 data,
+                                 loop,
+                                 total_loops)
+
+            #update of buddies status by searching them online
+            self.buddies_online = 0
+            servers = UTSQ.masterQuery()
+            self.win.server_search_count = 0
+            self.win.server_search_total = len(servers)
+            #we can update the buddies status here now
+            for server in servers:
+                t_search = BuddiesSearch(self.win, server)
+                t_search.start()
+
+            return True
 	
 	
 	#===
@@ -292,60 +300,6 @@ class BuddiesRefresh(GlobalThread):
 		return False
 
 
-	#===
-	#method to update the servers buddy icons
-	#HAVE TO RETURN FALSE
-	def updateServersTab(self):
-
-		#check for each server
-		self.win.servers_tree.get_model().foreach(self.updateServersTabLine)
-
-		#check for each player selected if any
-		#the player list is linked to the server address
-		(model, paths) = self.win.servers_tree.get_selection().get_selected_rows()
-		if paths:
-			#only if one server is selected, we display the list of players
-			self.win.servers_tree.set_cursor(paths[0])
-			#reselect the same line that triggers the event
-
-		return False
-
-
-	#===
-	#update on one server
-	def updateServersTabLine(self, tree_, path_, iter_, data_=None):
-		#reset the icon
-		tree_.set_value(iter_, 11, UTCFG.BUDDY_OFF_ICO)
-
-		#the player list is linked to the server address
-		address = tree_.get_value(iter_, 1)
-		#players on this server?
-		if address in self.win.players:
-			#we compare each player in the buddy list
-			for buddy in self.win.buddies:
-				#buddy online?
-				if buddy in [player[2] for player in self.win.players[address]]:
-					tree_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
-					break
-
-
-	#===
-	#update on one server
-	def updateServersTabPlayerLine(self, tree_, path_, iter_, data_=None):
-		#reset the icon
-		tree_.set_value(iter_, 11, UTCFG.BUDDY_OFF_ICO)
-
-		
-		#players on this server?
-		if address in self.win.players:
-			#we compare each player in the buddy list
-			for buddy in self.win.buddies:
-				#buddy online?
-				if buddy in [player[2] for player in self.win.players[address]]:
-					tree_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
-					break
-
-	
 #===
 #Threading the servers list refresh
 #===
@@ -390,7 +344,7 @@ class ServerPlay(GlobalThread):
 			
 		#closing and removing logs
 		logs.close()
-		os.remove("logs.txt")
+		#os.remove("logs.txt")
 		# -- / analysis of logs --
 		
 		# -- Servers analysis part --
@@ -444,8 +398,6 @@ class ServerPlay(GlobalThread):
 			gobject.idle_add(self.refreshServers)
 		#--- / servers analysis part ---
 		
-		
-		
 		#we unlock the launch command
 		self.win.game_running = False
 		self.updateStatusBar("Game closed")
@@ -463,7 +415,7 @@ class ServerPlay(GlobalThread):
 #Threading the search of buddies in other servers
 #===
 class BuddiesSearch(GlobalThread):
-
+        
 	def __init__(self, win_, server_addr_):
 		super(BuddiesSearch, self).__init__()
 		#@param win_ is the urt object with gui and other props
@@ -481,6 +433,7 @@ class BuddiesSearch(GlobalThread):
             players_str = ".".join(serv.clients)
 
             for buddy in self.win.buddies:
+                #buddy online?
                 if players_str.find(buddy) >= 0:
                     print "%s is found on the server : %s" % (buddy, self.server_addr)
 
@@ -498,12 +451,25 @@ class BuddiesSearch(GlobalThread):
                         # 5 server name markup
                         # 7 server address
 
+                    #update of the title
+                    BuddiesRefresh.buddies_online += 1
+                    print "buddies online:", BuddiesRefresh.buddies_online
+                    gobject.idle_add(self.updateBuddiesTabTitle, UTGUI.createBuddiesTabTitle(BuddiesRefresh.buddies_online))
+
             #close the server socket
             serv.close()
 
             self.win.server_search_count += 1
             gobject.idle_add(self.updateStatusBar,
                 "Searching for buddies from the Master Server : %i / %i" % (self.win.server_search_count, self.win.server_search_total) )
+
+
+        #===
+        #Method that updates the Buddies Tab title
+        #HAVE TO RETURN FALSE
+        def updateBuddiesTabTitle(self, title_widget_):
+            self.win.notebook.set_tab_label(self.win.buddies_tab, title_widget_)
+            return False
 
 
         #===
@@ -518,11 +484,75 @@ class BuddiesSearch(GlobalThread):
             # 7 server address
                 
             #current buddy found on another server? (current server address to be compared in model instead than the icon status)
-            if tree_.get_value(iter_, 0)==data_[0] and tree_.get_value(iter_, 7)!=data_[5]:
+            if tree_.get_value(iter_, 0)==data_[0]:
 
                 tree_.set_value(iter_, 1, data_[1])
                 tree_.set_value(iter_, 2, data_[2])
-                tree_.set_value(iter_, 4, data_[3])
                 tree_.set_value(iter_, 5, data_[4])
-                tree_.set_value(iter_, 6, UTCFG.BUDDY_OUT_ICO)
                 tree_.set_value(iter_, 7, data_[5])
+                
+                #specific cases
+                if data_[5] in self.win.servers:
+                    #buddy on a server in our bookmarks
+                    tree_.set_value(iter_, 4, "<b>"+data_[3]+"</b>")
+                    tree_.set_value(iter_, 6, UTCFG.BUDDY_ON_ICO)
+                    #update of the server tab
+                    gobject.idle_add(self.updateServersTab)
+                else:
+                    #buddy online on another server
+                    tree_.set_value(iter_, 6, UTCFG.BUDDY_OUT_ICO)
+                
+
+
+    	#===
+	#method to update the servers tab buddy icons
+	#HAVE TO RETURN FALSE
+	def updateServersTab(self):
+
+		#check for each server
+		self.win.servers_tree.get_model().foreach(self.updateServersTabLine)
+
+		#check for each player selected if any
+		#the player list is linked to the server address
+		(model, paths) = self.win.servers_tree.get_selection().get_selected_rows()
+		if paths:
+			#only if one server is selected, we display the list of players
+			self.win.servers_tree.set_cursor(paths[0])
+			#reselect the same line that triggers the event
+
+		return False
+
+
+	#===
+	#update on one server line of the tree view
+	def updateServersTabLine(self, tree_, path_, iter_, data_=None):
+		#reset the icon
+		tree_.set_value(iter_, 11, UTCFG.BUDDY_OFF_ICO)
+
+		#the player list is linked to the server address
+		address = tree_.get_value(iter_, 1)
+		#players on this server?
+		if address in self.win.players:
+			#we compare each player in the buddy list
+			for buddy in self.win.buddies:
+				#buddy online?
+				if buddy in [player[2] for player in self.win.players[address]]:
+					tree_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
+					break
+
+
+	#===
+	#update of one server players data
+	def updateServersTabPlayerLine(self, tree_, path_, iter_, data_=None):
+		#reset the icon
+		tree_.set_value(iter_, 11, UTCFG.BUDDY_OFF_ICO)
+
+
+		#players on this server?
+		if address in self.win.players:
+			#we compare each player in the buddy list
+			for buddy in self.win.buddies:
+				#buddy online?
+				if buddy in [player[2] for player in self.win.players[address]]:
+					tree_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
+					break

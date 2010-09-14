@@ -18,12 +18,12 @@ import gobject
 import os
 
 
-def createBuddiesTabTitle():
+def createBuddiesTabTitle(num_=0):
 	
 	buddies_tab_title = gtk.HBox()
 	#buddies_tab_title.set_size_request(150, 20)
 	buddies_tab_title.pack_start(gtk.image_new_from_file("rsc/buddies_ico.png"), False, False, 2)
-	buddies_tab_title.pack_start(gtk.Label("Buddies"), True, True, 2)
+	buddies_tab_title.pack_start(gtk.Label("Buddies (%i)" % num_), True, True, 2)
 	buddies_tab_title.show_all()
 	
 	return buddies_tab_title

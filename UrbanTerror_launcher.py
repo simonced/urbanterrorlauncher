@@ -8,7 +8,7 @@ This is a tool to save your prefered servers you play often on.
 """
 
 __author__="simonced@gmail.com"
-__version__="0.8"
+__version__="0.8.1"
 
 DEBUG = False
 
@@ -79,15 +79,18 @@ class Utl:
 		self.win.add(win_layer)
 		
 		#creating tab container
-		notebook = gtk.Notebook()
-		win_layer.pack_start(notebook, True, True, 0)
+		self.notebook = gtk.Notebook()
+		win_layer.pack_start(self.notebook, True, True, 0)
 		
 		self.statusBar = gtk.Statusbar()
 		win_layer.pack_start(self.statusBar, False, False, 0)
 		
 		#The first tab is for the servers
 		server_tab = gtk.VBox()
-		
+		#adding the server tab to the notebook
+		self.notebook.append_page(server_tab, UTGUI.createServersTabTitle() )
+
+                
 		# == Section1 == Listing and launching a server
 		
 		#model for the view (ListStore)
@@ -320,15 +323,13 @@ class Utl:
 		#adding the 2 blocs in the window
 		server_tab.pack_start(bloc_down, False, False, PaddingDefault)
 		
-		#adding the server tab to the notebook
-		notebook.append_page(server_tab, UTGUI.createServersTabTitle() )
 		
 		
 		#==========================
 		# === Section 2 === Buddies
 		#==========================
-		buddies_tab = gtk.VBox()
-		notebook.append_page(buddies_tab, UTGUI.createBuddiesTabTitle() )
+		self.buddies_tab = gtk.VBox()
+		self.notebook.append_page(self.buddies_tab, UTGUI.createBuddiesTabTitle() )
 		
 		buddies_list = gtk.ListStore(
 			str,
@@ -385,11 +386,11 @@ class Utl:
 		buddy_name_col.clicked()	#we activate the sorting by name by default
 		
 		#adding the tree to the view
-		buddies_tab.pack_start(buddies_scroll, True, True, PaddingDefault)
+		self.buddies_tab.pack_start(buddies_scroll, True, True, PaddingDefault)
 		
 		#then a row of buttons to control the action in the buddy list
 		buddy_row = gtk.HBox()
-		buddies_tab.pack_start(buddy_row, False, False, PaddingDefault)
+		self.buddies_tab.pack_start(buddy_row, False, False, PaddingDefault)
 
 		#button to delete a buddy
 		self.buddy_delete_bt = UTGUI.Button("Delete", "rsc/delete_ico.png")
@@ -401,10 +402,6 @@ class Utl:
 		self.buddy_join_bt.connect("clicked", self.buddyJoin )
 		buddy_row.pack_end(self.buddy_join_bt, False, False, PaddingDefault)
 
-                #button to search buddies on other servers
-		self.buddy_search_bt = UTGUI.Button("Search", "rsc/search_ico.png")
-		self.buddy_search_bt.connect("clicked", self.buddySearch )
-		buddy_row.pack_end(self.buddy_search_bt, False, False, PaddingDefault)
 		
 		#la fenetre
 		#----------
@@ -688,19 +685,6 @@ class Utl:
 		
 		if server_address:
 			self.serverPlay(server_addr_=server_address)
-
-
-        #===
-        #Launches a search of the buddies on all online servers, trough Master Server
-        def buddySearch(self, widget_=None, data_=None):
-
-            servers = UTSQ.masterQuery()
-            self.server_search_count = 0
-            self.server_search_total = len(servers)
-            for server in servers:
-                t = UTTHREAD.BuddiesSearch(self, server)
-                t.start()
-
 
 
 	#===
