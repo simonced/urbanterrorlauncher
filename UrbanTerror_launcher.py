@@ -65,9 +65,6 @@ class Utl:
                 #allows us to block more than 1 game launch
 		self.game_running = False
 
-                #awhen searching for buddies on master server, we count here
-                self.server_search_count = 0
-                self.server_search_total = 0
 		
 		# === GUI creation starting here ===
 		self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
