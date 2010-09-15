@@ -399,6 +399,10 @@ class Utl:
 		self.buddy_join_bt.connect("clicked", self.buddyJoin )
 		buddy_row.pack_end(self.buddy_join_bt, False, False, PaddingDefault)
 
+		#button to refresh the buddies
+		self.buddy_search_bt = UTGUI.Button("Research", "rsc/search_ico.png")
+		self.buddy_search_bt.connect("clicked", self.buddiesRefresh )
+		buddy_row.pack_end(self.buddy_search_bt, False, False, PaddingDefault)
 		
 		#la fenetre
 		#----------
