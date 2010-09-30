@@ -7,3 +7,4 @@ Clan tR 2nd|112.70.120.44:27961|TS
 PaladinWarriors Urban Terror 4.1|208.43.15.167:27960|TS
 WTF - IcyZone 2|64.156.193.115:27961|ICY
 WTF - IcyZone|64.156.192.169:27961|ICY
+clan =tr= west 1 v 1|112.70.120.44:27962|TDM

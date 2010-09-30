@@ -8,7 +8,7 @@ This is a tool to save your prefered servers you play often on.
 """
 
 __author__="simonced@gmail.com"
-__version__="0.8.1"
+__version__="0.8.2"
 
 DEBUG = False
 
@@ -482,8 +482,12 @@ class Utl:
 				name_markup = UTCOLORS.console_colors_to_markup( name )
 				#picto for buddies
 				picto = None
-				if name in self.buddies:
-					picto = UTCFG.BUDDY_ON_ICO
+				#thisallows to find players with different clan tags
+				#buddy name HAS to be clan-tag-less for this to work
+				for buddy in self.buddies:
+					if name.find(buddy) >= 0:
+						picto = UTCFG.BUDDY_ON_ICO
+						break
 					
 				model_players.append(
 					(name,
