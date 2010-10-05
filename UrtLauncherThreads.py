@@ -7,6 +7,7 @@ This is a tool to be used by UrbanTerrorLauncher.
 '''
 
 #import gtk
+from UrtLauncherConfig import DEFAULT_PORT
 from UrtLauncherConfig import BUDDY_OUT_ICO
 import gobject
 
@@ -265,6 +266,13 @@ class BuddiesRefresh(GlobalThread):
                                  loop,
                                  total_loops)
 
+            #seems that some of servers in bookmark are not listed in Master server?
+            #we'll querry them now, but we'll exclude them from the Master response
+            for server in self.win.servers:
+                print "Bookmarked Server Search:" + server
+                t_search = BuddiesSearch(self.win, server)
+                t_search.start()
+
             #update of buddies status by searching them online
             BuddiesRefresh.buddies_online = 0
             servers = UTSQ.masterQuery()
@@ -272,8 +280,10 @@ class BuddiesRefresh(GlobalThread):
             BuddiesRefresh.server_search_total = len(servers)
             #we can update the buddies status here now
             for server in servers:
-                t_search = BuddiesSearch(self.win, server)
-                t_search.start()
+                if server not in self.win.servers:
+                    print "Master Server Search:" + server
+                    t_search = BuddiesSearch(self.win, server)
+                    t_search.start()
 
             return True
 	
@@ -408,6 +418,8 @@ class BuddiesSearch(GlobalThread):
 		#@param win_ is the urt object with gui and other props
 		self.win = win_
                 self.server_addr = server_addr_
+                if self.server_addr.find(":") < 0:
+                    self.server_addr+=":" + str(UTCFG.DEFAULT_PORT)
 
 
         #===
@@ -417,10 +429,13 @@ class BuddiesSearch(GlobalThread):
             #query of the server
             addr, port = self.server_addr.split(":")
             serv = UTSQ.Utsq(addr, int(port) )
-            players_str = ".".join(serv.clients)
+            #clean players string so search inside
+            players_str = ""
+            for client in serv.clients:
+                players_str += client.split(" ", 2)[2].replace('"', '').strip()+"\n"
 
             for buddy in self.win.buddies:
-                #buddy online?
+                #buddy online? -- JOIN SEARCH
                 if players_str.find(buddy) >= 0:
                     print "%s is found on the server : %s" % (buddy, self.server_addr)
 
@@ -503,7 +518,7 @@ class BuddiesSearch(GlobalThread):
 
 
 	#===
-	#update on one server line of the tree view
+	#update one server line of the tree view
 	def updateServersTabLine(self, tree_, path_, iter_, data_=None):
 		#reset the icon
 		tree_.set_value(iter_, 11, UTCFG.BUDDY_OFF_ICO)
@@ -514,8 +529,8 @@ class BuddiesSearch(GlobalThread):
 		if address in self.win.players:
 			#we compare each player in the buddy list
 			for buddy in self.win.buddies:
-				#buddy online?
-				if buddy in [player[2] for player in self.win.players[address]]:
+				#buddy online? -- JOIN SEARCH
+				if "\n".join([player[2] for player in self.win.players[address]]).find(buddy)>=0:
 					tree_.set_value(iter_, 11, UTCFG.BUDDY_ON_ICO)
 					break
 
