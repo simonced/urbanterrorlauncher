@@ -1,5 +1,9 @@
 # urbanterrorlauncher
+
 A PyGTK app to manage bookmarks of Urban Terror servers
+
+1. [Requirements](requirements.md)
+2. [Setup](setup.md)
 
 # Introduction
 I'm an Urban Terror player for about 1 year, 
